@@ -43,6 +43,7 @@ class Plasticity(object):
     def _post(self, url, data):
         headers = {}
         headers['content-type'] = "application/json"
-        headers['authorization'] = "Bearer "+self.plasticity.token
+        if self.plasticity.token:
+            headers['authorization'] = "Bearer "+self.plasticity.token
         response = requests.request("POST", url, data=data, headers=headers)
         return json.loads(response.text)
