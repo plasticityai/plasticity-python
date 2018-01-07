@@ -16,7 +16,7 @@ class Core(Endpoint):
     def __init__(self, plasticity):
         """Initializes a new Core Endpoint."""
         super(Core, self).__init__(plasticity)
-        self._url = self.plasticity.url + "sapien/core/"
+        self.url = self.plasticity.sapien.url + "core/"
 
     def post(self, text, graph=True, ner=True, pretty=False):
         data = json.dumps({

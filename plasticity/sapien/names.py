@@ -16,7 +16,7 @@ class Names(Endpoint):
     def __init__(self, plasticity):
         """Initializes a new Names Endpoint."""
         super(Names, self).__init__(plasticity)
-        self._url = self.plasticity.url + "sapien/names/"
+        self.url = self.plasticity.sapien.url + "names/"
 
     def post(self, name, pretty=False):
         payload = json.dumps({

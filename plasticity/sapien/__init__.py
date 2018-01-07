@@ -13,6 +13,7 @@ class Sapien(Service):
     def __init__(self, plasticity):
         """Initializes a new Sapien Service."""
         super(Sapien, self).__init__(plasticity)
+        self.url = self.plasticity.url + "sapien/"
 
         # Endpoints
         self._core = None

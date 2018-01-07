@@ -2,21 +2,23 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import json
 import requests
 
 
 class Plasticity(object):
-    """A Plasticity class that holds the user's API token and determines if it's
-    local or a global instance of the service.
+    """A Plasticity class that holds the user's API token and location (url) of
+    the API to be used.
 
     Attributes:
         token: An API token to authenticate with the API
         url: A local or remote Plasticity API url to use
     """
 
-    def __init__(self, token=None, url=None):
+    def __init__(self, token=None, url=None, environment=None):
         """Initializes a new Plasticity object."""
+        environment = environment or os.environ
         self.url = url or 'https://api.plasticity.ai/'
         self.token = token or environment.get('PLASTICITY_API_KEY')
 
@@ -39,9 +41,8 @@ class Plasticity(object):
         return self._cortex
 
     def _post(self, url, data):
-        headers = {
-        'content-type': "application/json",
-        'authorization': "Bearer "+self.plasticity.token
-        }
+        headers = {}
+        headers['content-type'] = "application/json"
+        headers['authorization'] = "Bearer "+self.plasticity.token
         response = requests.request("POST", url, data=data, headers=headers)
         return json.loads(response.text)
