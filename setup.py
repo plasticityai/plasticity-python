@@ -11,10 +11,10 @@ setup(
     license = 'MIT',
     extras_require = {
         ':python_version<"3.0"': [
-            "requests[security] >= 2.0.0",
+            "requests[security]",
         ],
         ':python_version>="3.0"': [
-            "requests >= 2.0.0",
+            "requests",
         ],
     },
     packages = find_packages(exclude=['tests', 'tests.*']),
