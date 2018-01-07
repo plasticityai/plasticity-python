@@ -30,15 +30,84 @@ class Core(Endpoint):
     def get_entity_from_role(self, graph, role):
         return (graph[role] if graph[role] else {}).get('entity', None)
 
-    def sentence_graph(self, text, ner=True, pretty=False):
+    def tpls(self, text, ner=True):
+        """Gets each token, its part of speech, and its lemma for each token in
+        the text.
+
+        If ner is enabled, returns an array, where each index is another array
+        containing the [token, POS, lemma]s for each alternative. If ner is 
+        disabled, returns an array, where each index is a [token, POS, lemma].
         """
-        Function for the Sentence Graph endpoint
+        json = self.post(text, graph=True, ner=ner)
+        response = self.Response(json)
+        output = []
+        if ner:
+            for sentence_group in response.data:
+                alternative_tpls = []
+                for sentence in sentence_group.alternatives:
+                    alternative_tpls.extend(sentence.tokens)
+                output.append(alternative_tpls)
+        else:
+            for sentence in response.data:
+                output.extend(sentence.tokens)
+        return output
+
+    def _tpl_helper(self, tpl_index, text, ner=True):
+        """Returns either the tokens, pos's, or lemmas for a text. Set tpl_index 
+        to 0 for tokens, 1 for pos, or 2 for lemmas.
+
+        If ner is enabled, returns an array, where each index is another array
+        containing the t/p/l for each alternative. If ner is disabled, 
+        returns an array, where each index is a t/p/l.
+        """
+        tpls = self.tpls(text, ner=ner)
+        output = []
+        if ner:
+            for alternative in tpls:
+                alternative_tokens = [tpl[tpl_index] for tpl in alternative]
+                output.append(alternative_tokens)
+        else:
+            output = [tpl[tpl_index] for tpl in tpls]
+        return output
+
+    def tokenize(self, text, ner=True):
+        """Handles the Tokenization endpoint.
+
+        If ner is enabled, returns an array, where each index is another array
+        containing the tokens for each alternative. If ner is disabled, 
+        returns an array, where each index is a token.
+        """
+        return self._tpl_helper(0, text, ner)
+
+    def parts_of_speech(self, text, ner=True):
+        """Handles the Parts of Speech endpoint.
+
+        If ner is enabled, returns an array, where each index is another array
+        containing the POSs for each alternative. If ner is disabled, 
+        returns an array, where each index is a POS.
+        """
+        return self._tpl_helper(1, text, ner)
+
+    def lemmatize(self, text, ner=True):
+        """Handles the Lemmatization endpoint.
+
+        If ner is enabled, returns an array, where each index is another array
+        containing the lemmas for each alternative. If ner is disabled, 
+        returns an array, where each index is a lemma.
+        """
+        return self._tpl_helper(2, text, ner)
+
+    def sentence_graph(self, text, ner=True):
+        """Handles the Sentence Graph endpoint. A graph of entities and 
+        relationships will appear under the graph key for each sentence. This 
+        task provides similar information to the relation extraction task or 
+        open information extraction task in NLP.
 
         If ner is enabled, returns an array, where each index is another array
         containing the alternatives for that sentence. If ner is disabled, 
         returns an array, where each index is the graph for that sentence.
         """
-        json = self.post(text, graph=True, ner=ner, pretty=pretty)
+        json = self.post(text, graph=True, ner=ner)
         response = self.Response(json)
         graphs = []
         if ner:
@@ -54,8 +123,7 @@ class Core(Endpoint):
             return graphs
 
     def coreference_resolution(self, entity, sentence, history):
-        """
-        Function for the Coreference Resolution endpoint
+        """Handles the Coreference Resolution endpoint. 
 
         history is an array of arrays, where the outer array indices are ordered 
         from oldest to newest entities. The inner array indices all occured in 
