@@ -64,8 +64,8 @@ class Core(Endpoint):
         output = []
         if ner:
             for alternative in tpls:
-                alternative_tokens = [tpl[tpl_index] for tpl in alternative]
-                output.append(alternative_tokens)
+                alternative_tpls = [tpl[tpl_index] for tpl in alternative]
+                output.append(alternative_tpls)
         else:
             output = [tpl[tpl_index] for tpl in tpls]
         return output
