@@ -11,5 +11,5 @@ class Service(object):
     """
 
     def __init__(self, plasticity):
-    """Initializes a new Service."""
+        """Initializes a new Service."""
         self.plasticity = plasticity
