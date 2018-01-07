@@ -3,7 +3,8 @@ A Python module for using the Plasticity API.
 
 ## Installation
 This module is not yet on pip, a package manager for python. In the meantime,
-you can download the source code for `plasticity-pyton` and then run:
+you can download the source code for `plasticity-pyton` and setup the module
+by running:
 ```
 git clone https://gitlab.com/Plasticity/plasticity-python.git
 cd plasticity-python
