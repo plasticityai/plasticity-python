@@ -239,10 +239,10 @@ class Relation(object):
         object_ = (
             Entity.from_json(r['object']) if type_ == 'entity' else
             Relation.from_json(r['object']) if type_ == 'relation' else None)
-        prepositions = [Preposition.from_json(p) 
+        prepositions = [Preposition.from_json(p)
                         for p in r.get('prepositions', [])
                         if p.get('type') == 'preposition']
-        predicate = Predicate(utils.deep_get(r, 'predicate'))
+        predicate = Predicate.from_json(utils.deep_get(r, 'predicate'))
         question = utils.deep_get(r, 'question')
         questionAuxillary = utils.deep_get(r, 'questionAuxillary')
         return cls(
