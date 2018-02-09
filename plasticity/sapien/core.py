@@ -232,7 +232,7 @@ class Relation(object):
     def from_json(cls, r):
         """Builds a `Relation` from a json object."""
         type_ = utils.deep_get(r, 'subject', 'type')
-        subject_ = (
+        subject = (
             Entity.from_json(r['subject']) if type_ == 'entity' else
             Relation.from_json(r['subject']) if type_ == 'relation' else None)
         type_ = utils.deep_get(r, 'object', 'type')
