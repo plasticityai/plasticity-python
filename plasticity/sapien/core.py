@@ -243,12 +243,14 @@ class Relation(object):
                         for p in r.get('prepositions', [])
                         if p.get('type') == 'preposition']
         predicate = Predicate.from_json(utils.deep_get(r, 'predicate'))
+        qualifiers = utils.deep_get(r, 'qualifiers')
+        vm_subject_prefix = utils.deep_get(r, 'verbModifiersSubjectSuffix')
+        vm_object_prefix = utils.deep_get(r, 'verbModifiersObjectSuffix')
         question = utils.deep_get(r, 'question')
         questionAuxillary = utils.deep_get(r, 'questionAuxillary')
         return cls(
             subject, predicate, object_, qualifiers, prepositions,
-            verb_modifiers_subject_prefix, verb_modifiers_object_prefix,
-            question, questionAuxillary)
+            vm_subject_prefix, vm_object_prefix, question, questionAuxillary)
 
 
 class Entity(object):
@@ -286,8 +288,8 @@ class Entity(object):
         determiner = utils.deep_get(e, 'determiner')
         properNoun = utils.deep_get(e, 'properNoun')
         person = utils.deep_get(e, 'person')
-        entity_modifiers_prefix = utils.deep_get(e, 'entity_modifiers_prefix')
-        entity_modifiers_suffix = utils.deep_get(e, 'entity_modifiers_suffix')
+        entity_modifiers_prefix = utils.deep_get(e, 'entityModifiersPrefix')
+        entity_modifiers_suffix = utils.deep_get(e, 'entityModifiersSuffix')
         possessive_entity = utils.deep_get(e, 'possessive_entity')
         possessive_suffix = utils.deep_get(e, 'possessive_suffix')
         ner = utils.deep_get(e, 'ner')
@@ -303,20 +305,20 @@ class Predicate(object):
     """
 
     def __init__(
-            self, verb, index, negated, tense, conjugation, phrasalParticle,
-            auxillaryQualifier, verbPrefix, verbSuffix, verbModifiersPrefix,
-            verbModifiersSuffix):
+            self, verb, index, negated, tense, conjugation, phrasal_particle,
+            auxillary_qualifier, verb_prefix, verb_suffix, verb_modifiers_prefix,
+            verb_modifiers_suffix):
         self.verb = verb
         self.index = index
         self.negated = negated
         self.tense = tense
         self.conjugation = conjugation
-        self.phrasalParticle = phrasalParticle
-        self.auxillaryQualifier = auxillaryQualifier
-        self.verbPrefix = verbPrefix
-        self.verbSuffix = verbSuffix
-        self.verbModifiersPrefix = verbModifiersPrefix
-        self.verbModifiersSuffix = verbModifiersSuffix
+        self.phrasal_particle = phrasal_particle
+        self.auxillary_qualifier = auxillary_qualifier
+        self.verb_prefix = verb_prefix
+        self.verb_suffix = verb_suffix
+        self.verb_modifiers_prefix = verb_modifiers_prefix
+        self.verb_modifiers_suffix = verb_modifiers_suffix
 
     def __repr__(self):
         return '<Predicate %s>' % id(self)
@@ -332,16 +334,16 @@ class Predicate(object):
         negated = utils.deep_get(p, 'negated')
         tense = utils.deep_get(p, 'tense')
         conjugation = utils.deep_get(p, 'conjugation')
-        phrasalParticle = utils.deep_get(p, 'phrasalParticle')
-        auxillaryQualifier = utils.deep_get(p, 'auxillaryQualifier')
-        verbPrefix = utils.deep_get(p, 'verbPrefix')
-        verbSuffix = utils.deep_get(p, 'verbSuffix')
-        verbModifiersPrefix = utils.deep_get(p, 'verbModifiersPrefix')
-        verbModifiersSuffix = utils.deep_get(p, 'verbModifiersSuffix')
+        phrasal_particle = utils.deep_get(p, 'phrasalParticle')
+        auxillary_qualifier = utils.deep_get(p, 'auxillaryQualifier')
+        verb_prefix = utils.deep_get(p, 'verbPrefix')
+        verb_suffix = utils.deep_get(p, 'verbSuffix')
+        verb_modifiers_prefix = utils.deep_get(p, 'verbModifiersPrefix')
+        verb_modifiers_suffix = utils.deep_get(p, 'verbModifiersSuffix')
         return cls(
-            verb, index, negated, tense, conjugation, phrasalParticle,
-            auxillaryQualifier, verbPrefix, verbSuffix,
-            verbModifiersPrefix, verbModifiersSuffix)
+            verb, index, negated, tense, conjugation, phrasal_particle,
+            auxillary_qualifier, verb_prefix, verb_suffix,
+            verb_modifiers_prefix, verb_modifiers_suffix)
 
 
 class Preposition(object):
@@ -365,9 +367,9 @@ class Preposition(object):
         """Builds a `Predicate` from a json object."""
         preposition = utils.deep_get(p, 'preposition')
         index = utils.deep_get(p, 'index')
-        type_ = utils.deep_get(p, 'preposition_object', 'type')
+        type_ = utils.deep_get(p, 'prepositionObject', 'type')
         preposition_object = (
-            Entity.from_json(p['preposition_object']) if type_ == 'entity' else
-            Relation.from_json(p['preposition_object']) if type_ == 'relation'
+            Entity.from_json(p['prepositionObject']) if type_ == 'entity' else
+            Relation.from_json(p['prepositionObject']) if type_ == 'relation'
             else None)
         return cls(preposition, preposition_object, index)
