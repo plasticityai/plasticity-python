@@ -29,6 +29,5 @@ setup(
         ':python_version>="3.0"': [
             "requests >= 2.0.0",
         ],
-    },
-    zip_safe=False
+    }
 )
