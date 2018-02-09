@@ -328,7 +328,7 @@ class Predicate(object):
     def from_json(cls, p):
         """Builds a `Predicate` from a json object."""
         verb = utils.deep_get(p, 'verb')
-        index = utils.deep_get(e, 'index')
+        index = utils.deep_get(p, 'index')
         negated = utils.deep_get(p, 'negated')
         tense = utils.deep_get(p, 'tense')
         conjugation = utils.deep_get(p, 'conjugation')
