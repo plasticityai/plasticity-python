@@ -41,7 +41,7 @@ class Core(Endpoint):
         index is a [token, POS, lemma].
         """
         json = self.post(text, graph=True, ner=ner)
-        response = self.Response(json)
+        response = Response.from_json(json)
         output = []
         if ner:
             for sentence_group in response.data:
@@ -111,7 +111,7 @@ class Core(Endpoint):
         graph for that sentence.
         """
         json = self.post(text, graph=True, ner=ner)
-        response = self.Response(json)
+        response = Response.from_json(json)
         graphs = []
         if ner:
             for d in response.data:
@@ -145,9 +145,9 @@ class Response(object):
         data = []
         for d in res.get('data', []):
             if d['type'] == 'sentenceGroup':
-                data.append(SentenceGroup(d))
+                data.append(SentenceGroup.from_json(d))
             elif d['type'] == 'sentence':
-                data.append(Sentence(d))
+                data.append(Sentence.from_json(d))
         error = utils.deep_get(res, 'error')
         return cls(data, error)
 
@@ -169,7 +169,8 @@ class SentenceGroup(object):
     @classmethod
     def from_json(cls, sg):
         """Builds a `SentenceGroup` from a json object."""
-        alternatives = [Sentence(a) for a in sg.get('alternatives', [])
+        alternatives = [Sentence.from_json(a)
+                        for a in sg.get('alternatives', [])
                         if a.get('type') == 'sentence']
         return cls(alternatives)
 
@@ -194,7 +195,7 @@ class Sentence(object):
     @classmethod
     def from_json(cls, s):
         """Builds a `Sentence` from a json object."""
-        graph = [Relation(g) for g in s.get('graph', [])
+        graph = [Relation.from_json(g) for g in s.get('graph', [])
                  if g.get('type') == 'relation']
         dependencies = utils.deep_get(s, 'dependencies')
         sentence = utils.deep_get(s, 'sentence')
@@ -232,13 +233,14 @@ class Relation(object):
         """Builds a `Relation` from a json object."""
         type_ = utils.deep_get(r, 'subject', 'type')
         subject_ = (
-            Entity(r['subject']) if type_ == 'entity' else
-            Relation(r['subject']) if type_ == 'relation' else None)
+            Entity.from_json(r['subject']) if type_ == 'entity' else
+            Relation.from_json(r['subject']) if type_ == 'relation' else None)
         type_ = utils.deep_get(r, 'object', 'type')
         object_ = (
-            Entity(r['object']) if type_ == 'entity' else
-            Relation(r['object']) if type_ == 'relation' else None)
-        prepositions = [Preposition(p) for p in r.get('prepositions', [])
+            Entity.from_json(r['object']) if type_ == 'entity' else
+            Relation.from_json(r['object']) if type_ == 'relation' else None)
+        prepositions = [Preposition.from_json(p) 
+                        for p in r.get('prepositions', [])
                         if p.get('type') == 'preposition']
         predicate = Predicate(utils.deep_get(r, 'predicate'))
         question = utils.deep_get(r, 'question')
@@ -365,6 +367,7 @@ class Preposition(object):
         index = utils.deep_get(p, 'index')
         type_ = utils.deep_get(p, 'preposition_object', 'type')
         preposition_object = (
-            Entity(p['preposition_object']) if type_ == 'entity' else
-            Relation(p['preposition_object']) if type_ == 'relation' else None)
+            Entity.from_json(p['preposition_object']) if type_ == 'entity' else
+            Relation.from_json(p['preposition_object']) if type_ == 'relation'
+            else None)
         return cls(preposition, preposition_object, index)
