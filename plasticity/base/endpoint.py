@@ -9,7 +9,7 @@ class Endpoint(object):
     Attributes:
         plasticity: a Plasticity instance with the API URL and token
     """
-    
+
     def __init__(self, plasticity):
         """Initializes a new Endpoint."""
         self.plasticity = plasticity

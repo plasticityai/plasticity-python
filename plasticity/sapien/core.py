@@ -10,9 +10,10 @@ from plasticity.base.endpoint import Endpoint
 
 
 class Core(Endpoint):
-    """The Core Endpoint performs all the Core API functions described here:
-    https://www.plasticity.ai/api/docs/#sapien-core
+    """The Core Endpoint performs all the Core API functions described
+    here: https://www.plasticity.ai/api/docs/#sapien-core
     """
+
     def __init__(self, plasticity):
         """Initializes a new Core Endpoint."""
         super(Core, self).__init__(plasticity)
@@ -31,12 +32,13 @@ class Core(Endpoint):
         return (graph[role] if graph[role] else {}).get('entity', None)
 
     def tpls(self, text, ner=True):
-        """Gets each token, its part of speech, and its lemma for each token in
-        the text.
+        """Gets each token, its part of speech, and its lemma for each 
+        token in the text.
 
-        If ner is enabled, returns an array, where each index is another array
-        containing the [token, POS, lemma]s for each alternative. If ner is 
-        disabled, returns an array, where each index is a [token, POS, lemma].
+        If ner is enabled, returns an array, where each index is 
+        another array containing the [token, POS, lemma]s for each 
+        alternative. If ner is disabled, returns an array, where each 
+        index is a [token, POS, lemma].
         """
         json = self.post(text, graph=True, ner=ner)
         response = self.Response(json)
@@ -53,12 +55,12 @@ class Core(Endpoint):
         return output
 
     def _tpl_helper(self, tpl_index, text, ner=True):
-        """Returns either the tokens, pos's, or lemmas for a text. Set tpl_index 
-        to 0 for tokens, 1 for pos, or 2 for lemmas.
+        """Returns either the tokens, pos's, or lemmas for a text.
+        Set tpl_index to 0 for tokens, 1 for pos, or 2 for lemmas.
 
-        If ner is enabled, returns an array, where each index is another array
-        containing the t/p/l for each alternative. If ner is disabled, 
-        returns an array, where each index is a t/p/l.
+        If ner is enabled, returns an array, where each index is 
+        another array containing the t/p/l for each alternative. If 
+        ner is disabled, returns an array, where each index is a t/p/l.
         """
         tpls = self.tpls(text, ner=ner)
         output = []
@@ -73,39 +75,40 @@ class Core(Endpoint):
     def tokenize(self, text, ner=True):
         """Handles the Tokenization endpoint.
 
-        If ner is enabled, returns an array, where each index is another array
-        containing the tokens for each alternative. If ner is disabled, 
-        returns an array, where each index is a token.
+        If ner is enabled, returns an array, where each index is another 
+        array containing the tokens for each alternative. If ner is 
+        disabled, returns an array, where each index is a token.
         """
         return self._tpl_helper(0, text, ner)
 
     def parts_of_speech(self, text, ner=True):
         """Handles the Parts of Speech endpoint.
 
-        If ner is enabled, returns an array, where each index is another array
-        containing the POSs for each alternative. If ner is disabled, 
-        returns an array, where each index is a POS.
+        If ner is enabled, returns an array, where each index is another 
+        array containing the POSs for each alternative. If ner is 
+        disabled, returns an array, where each index is a POS.
         """
         return self._tpl_helper(1, text, ner)
 
     def lemmatize(self, text, ner=True):
         """Handles the Lemmatization endpoint.
 
-        If ner is enabled, returns an array, where each index is another array
-        containing the lemmas for each alternative. If ner is disabled, 
-        returns an array, where each index is a lemma.
+        If ner is enabled, returns an array, where each index is another 
+        array containing the lemmas for each alternative. If ner is 
+        disabled, returns an array, where each index is a lemma.
         """
         return self._tpl_helper(2, text, ner)
 
     def sentence_graph(self, text, ner=True):
         """Handles the Sentence Graph endpoint. A graph of entities and 
-        relationships will appear under the graph key for each sentence. This 
-        task provides similar information to the relation extraction task or 
-        open information extraction task in NLP.
+        relationships will appear under the graph key for each sentence. 
+        This task provides similar information to the relation 
+        extraction task or open information extraction task in NLP.
 
-        If ner is enabled, returns an array, where each index is another array
-        containing the alternatives for that sentence. If ner is disabled, 
-        returns an array, where each index is the graph for that sentence.
+        If ner is enabled, returns an array, where each index is 
+        another array containing the alternatives for that sentence. 
+        If ner is disabled, returns an array, where each index is the 
+        graph for that sentence.
         """
         json = self.post(text, graph=True, ner=ner)
         response = self.Response(json)
@@ -122,215 +125,246 @@ class Core(Endpoint):
                 graphs.append(d.graph)
             return graphs
 
-    def coreference_resolution(self, entity, sentence, history):
-        """Handles the Coreference Resolution endpoint. 
 
-        history is an array of arrays, where the outer array indices are ordered 
-        from oldest to newest entities. The inner array indices all occured in 
-        the same sentence.
-        """
-        tokens = sentence.split(" ")
+class Response(object):
+    """Holds the `Response` data from a Core API call."""
 
-        # Handle male coreferences
-        if entity.entity.lower() in ['he']:
-            for outer in reversed(history):
-                for inner in outer:
-                    if self.plasticity.sapien.names.is_male_name(inner.entity):
-                        tokens[entity.index] = inner.entity
-                        return " ".join(tokens)
+    def __init__(self, data, error):
+        self.data = data
+        self.error = error
 
-        # Handle female coreferences
-        elif entity.entity.lower() in ['she']:
-            for outer in reversed(history):
-                for inner in outer:
-                    if self.plasticity.sapien.names.is_female_name(inner.entity):
-                        tokens[entity.index] = inner.entity
-                        return " ".join(tokens)
+    def __repr__(self):
+        return '<Response %s>' % id(self)
 
-        # Handle plural coreferences
-        elif entity.entity.lower() in ['they']:
-            resolvedEntities = []
-            for outer in reversed(history):
-                for inner in outer:
-                    if self.plasticity.sapien.names.is_first_name(inner.entity):
-                        resolvedEntities.append(inner.entity)
-                if len(resolvedEntities) > 1:
-                    break
-            tokens[entity.index] = " and ".join(resolvedEntities)
-            return " ".join(tokens)
+    def __str__(self):
+        return '<Response %s>' % id(self)
 
-        # Caught no coreferences, return the original
-        return sentence
+    @classmethod
+    def from_json(cls, res):
+        """Builds a `Response` from a json object."""
+        data = []
+        for d in res.get('data', []):
+            if d['type'] == 'sentenceGroup':
+                data.append(SentenceGroup(d))
+            elif d['type'] == 'sentence':
+                data.append(Sentence(d))
+        error = utils.deep_get(res, 'error')
+        return cls(data, error)
 
 
-    class Response(object):
-        """docstring for Response"""
-        def __init__(self, res):
-            super(Core.Response, self).__init__()
+class SentenceGroup(object):
+    """Holds the `SentenceGroup` data within a `Response` from a 
+    Core API call.
+    """
 
-            data = []
-            if 'data' in res:
-                for d in res['data']:
-                    if d['type'] == 'sentenceGroup':
-                        data.append(Core.SentenceGroup(d))
-                    elif d['type'] == 'sentence':
-                        data.append(Core.Sentence(d))
+    def __init__(self, alternatives):
+        self.alternatives = alternatives
 
-            self.data = data
-            self.error = utils.deep_get(res, 'error')
+    def __repr__(self):
+        return '<SentenceGroup %s>' % id(self)
 
-        def __repr__(self):
-            return ('<Response %s>' % (id(self)))
+    def __str__(self):
+        return '<SentenceGroup %s>' % id(self)
 
-        def __str__(self):
-            return ('<Response %s>' % (id(self)))
-
-
-    class SentenceGroup(object):
-        """docstring for SentenceGroup"""
-        def __init__(self, sg):
-            super(Core.SentenceGroup, self).__init__()
-            
-            alternatives = []
-            if 'alternatives' in sg:
-                for a in sg['alternatives']:
-                    if a['type'] == 'sentence':
-                        alternatives.append(Core.Sentence(a))
-
-            self.alternatives = alternatives
-
-        def __repr__(self):
-            return ('<SentenceGroup %s>' % (id(self)))
-
-        def __str__(self):
-            return ('<SentenceGroup %s>' % (id(self)))
-    
-
-    class Sentence(object):
-        """docstring for Sentence"""
-        def __init__(self, s):
-            super(Core.Sentence, self).__init__()
-
-            graph = []
-            if 'graph' in s:
-                for g in s['graph']:
-                    if g['type'] == 'relation':
-                        graph.append(Core.Relation(g))
-
-            self.graph = graph
-            self.dependencies = utils.deep_get(s, 'dependencies')
-            self.sentence = utils.deep_get(s, 'sentence')
-            self.tokens = utils.deep_get(s, 'tokens')
-
-        def __repr__(self):
-            return ('<Sentence %s>' % (id(self)))
-
-        def __str__(self):
-            return ('<Sentence %s>' % (id(self)))
-    
-
-    class Relation(object):
-        """docstring for Relation"""
-        def __init__(self, r):
-            super(Core.Relation, self).__init__()
-
-            prepositions = []
-            for p in r['prepositions']:
-                if p['type'] == 'preposition':
-                    prepositions.append(Core.Preposition(p))
-
-            if utils.deep_get(r, 'object', 'type') == 'entity':
-                self.object = Core.Entity(r['object'])
-            elif utils.deep_get(r, 'object', 'type') == 'relation':
-                self.object = Core.Relation(r['object'])
-            else:
-                self.object = None
-
-            if utils.deep_get(r, 'subject', 'type') == 'entity':
-                self.subject = Core.Entity(r['subject'])
-            elif utils.deep_get(r, 'subject', 'type') == 'relation':
-                self.subject = Core.Relation(r['subject'])
-            else:
-                self.subject = None
-
-            self.index = utils.deep_get(r, 'index')
-            self.predicate = Core.Predicate(r['predicate']) if utils.key_defined_and_has_value(r, 'predicate') else None
-            self.prepositions = prepositions
-            self.question = utils.deep_get(r, 'question')
-            self.questionAuxillary = utils.deep_get(r, 'questionAuxillary')
-
-        def __repr__(self):
-            return ('<Relation %s>' % (id(self)))
-
-        def __str__(self):
-            return ('<Relation %s>' % (id(self)))
+    @classmethod
+    def from_json(cls, sg):
+        """Builds a `SentenceGroup` from a json object."""
+        alternatives = [Sentence(a) for a in sg.get('alternatives', [])
+                        if a.get('type') == 'sentence']
+        return cls(alternatives)
 
 
-    class Entity(object):
-        """docstring for Entity"""
-        def __init__(self, e):
-            super(Core.Entity, self).__init__()
+class Sentence(object):
+    """Holds the `Sentence` data within a `Response` or 
+    `SentenceGroup` from a Core API call.
+    """
 
-            self.determiner = utils.deep_get(e, 'determiner')
-            self.entity = utils.deep_get(e, 'entity')
-            self.entityModifiersPrefix = utils.deep_get(e, 'entityModifiersPrefix')
-            self.entityModifiersSuffix = utils.deep_get(e, 'entityModifiersSuffix')
-            self.index = utils.deep_get(e, 'index')
-            self.ner = utils.deep_get(e, 'ner')
-            self.person = utils.deep_get(e, 'person')
-            self.possessiveEntity = utils.deep_get(e, 'possessiveEntity')
-            self.possessiveSuffix = utils.deep_get(e, 'possessiveSuffix')
-            self.properNoun = utils.deep_get(e, 'properNoun')
+    def __init__(self, sentence, tokens, graph, dependencies):
+        self.graph = graph
+        self.dependencies = dependencies
+        self.sentence = sentence
+        self.tokens = tokens
 
-        def __repr__(self):
-            return ('<Entity %s>' % (id(self)))
+    def __repr__(self):
+        return '<Sentence %s>' % id(self)
 
-        def __str__(self):
-            return (('%s (Entity)' % (self.entity)) if self.entity else ('(Entity)'))
+    def __str__(self):
+        return self.sentence
+
+    @classmethod
+    def from_json(cls, s):
+        """Builds a `Sentence` from a json object."""
+        graph = [Relation(g) for g in s.get('graph', [])
+                 if g.get('type') == 'relation']
+        dependencies = utils.deep_get(s, 'dependencies')
+        sentence = utils.deep_get(s, 'sentence')
+        tokens = utils.deep_get(s, 'tokens')
+        return cls(sentence, tokens, graph, dependencies)
 
 
+class Relation(object):
+    """Holds the `Relation` data within a `Sentence` from a 
+    Core API call.
+    """
 
-    class Predicate(object):
-        """docstring for Predicate"""
-        def __init__(self, p):
-            super(Core.Predicate, self).__init__()
+    def __init__(
+            self, subject, predicate, object_, qualifiers, prepositions,
+            verb_modifiers_subject_prefix, verb_modifiers_object_prefix,
+            question, questionAuxillary):
+        self.subject = subject
+        self.predicate = predicate
+        self.object = object_
+        self.qualifiers = qualifiers
+        self.prepositions = prepositions
+        self.verb_modifiers_subject_prefix = verb_modifiers_subject_prefix
+        self.verb_modifiers_object_prefix = verb_modifiers_object_prefix
+        self.question = question
+        self.questionAuxillary = questionAuxillary
 
-            self.auxillaryQualifier = utils.deep_get(p, 'auxillaryQualifier')
-            self.conjugation = utils.deep_get(p, 'conjugation')
-            self.negated = utils.deep_get(p, 'negated')
-            self.phrasalParticle = utils.deep_get(p, 'phrasalParticle')
-            self.tense = utils.deep_get(p, 'tense')
-            self.verb = utils.deep_get(p, 'verb')
-            self.verbModifiersPrefix = utils.deep_get(p, 'verbModifiersPrefix')
-            self.verbModifiersSuffix = utils.deep_get(p, 'verbModifiersSuffix')
-            self.verbPrefix = utils.deep_get(p, 'verbPrefix')
-            self.verbSuffix = utils.deep_get(p, 'verbSuffix')
+    def __repr__(self):
+        return '<Relation %s>' % id(self)
 
-        def __repr__(self):
-            return ('<Predicate %s>' % (id(self)))
+    def __str__(self):
+        return '<Relation %s>' % id(self)
 
-        def __str__(self):
-            return (('%s (Predicate)' % (self.verb)) if self.verb else ('(Predicate)'))
-    
+    @classmethod
+    def from_json(cls, r):
+        """Builds a `Relation` from a json object."""
+        type_ = utils.deep_get(r, 'subject', 'type')
+        subject_ = (
+            Entity(r['subject']) if type_ == 'entity' else
+            Relation(r['subject']) if type_ == 'relation' else None)
+        type_ = utils.deep_get(r, 'object', 'type')
+        object_ = (
+            Entity(r['object']) if type_ == 'entity' else
+            Relation(r['object']) if type_ == 'relation' else None)
+        prepositions = [Preposition(p) for p in r.get('prepositions', [])
+                        if p.get('type') == 'preposition']
+        predicate = Predicate(utils.deep_get(r, 'predicate'))
+        question = utils.deep_get(r, 'question')
+        questionAuxillary = utils.deep_get(r, 'questionAuxillary')
+        return cls(
+            subject, predicate, object_, qualifiers, prepositions,
+            verb_modifiers_subject_prefix, verb_modifiers_object_prefix,
+            question, questionAuxillary)
 
-    class Preposition(object):
-        """docstring for Preposition"""
-        def __init__(self, p):
-            super(Core.Preposition, self).__init__()
 
-            if utils.deep_get(p, 'prepositionObject', 'type') == 'entity':
-                self.prepositionObject = Core.Entity(p['prepositionObject'])
-            elif utils.deep_get(p, 'prepositionObject', 'type') == 'relation':
-                self.prepositionObject = Core.Relation(p['prepositionObject'])
-            else:
-                self.prepositionObject = None
+class Entity(object):
+    """Holds the `Entity` data within a `Relation` from a 
+    Core API call. An `Entity` holds information for subjects 
+    and objects.
+    """
 
-            self.index = utils.deep_get(p, 'index')
-            self.preposition = utils.deep_get(p, 'preposition')
+    def __init__(
+            self, entity, index, determiner, properNoun, person,
+            entity_modifiers_prefix, entity_modifiers_suffix,
+            possessive_entity, possessive_suffix, ner):
+        self.entity = entity
+        self.index = index
+        self.determiner = determiner
+        self.properNoun = properNoun
+        self.person = person
+        self.entity_modifiers_prefix = entity_modifiers_prefix
+        self.entity_modifiers_suffix = entity_modifiers_suffix
+        self.possessive_entity = possessive_entity
+        self.possessive_suffix = possessive_suffix
+        self.ner = ner
 
-        def __repr__(self):
-            return ('<Preposition %s>' % (id(self)))
+    def __repr__(self):
+        return '<Entity %s>' % id(self)
 
-        def __str__(self):
-            return (('%s %s (Preposition)' % (self.preposition, self.prepositionObject)) if self.preposition and self.prepositionObject else 
-                            ('%s (Preposition)' % (self.preposition)) if self.preposition else ('(Preposition)'))
+    def __str__(self):
+        return self.entity
+
+    @classmethod
+    def from_json(cls, e):
+        """Builds an `Entity` from a json object."""
+        entity = utils.deep_get(e, 'entity')
+        index = utils.deep_get(e, 'index')
+        determiner = utils.deep_get(e, 'determiner')
+        properNoun = utils.deep_get(e, 'properNoun')
+        person = utils.deep_get(e, 'person')
+        entity_modifiers_prefix = utils.deep_get(e, 'entity_modifiers_prefix')
+        entity_modifiers_suffix = utils.deep_get(e, 'entity_modifiers_suffix')
+        possessive_entity = utils.deep_get(e, 'possessive_entity')
+        possessive_suffix = utils.deep_get(e, 'possessive_suffix')
+        ner = utils.deep_get(e, 'ner')
+        return cls(
+            entity, index, determiner, properNoun, person,
+            entity_modifiers_prefix, entity_modifiers_suffix,
+            possessive_entity, possessive_suffix, ner)
+
+
+class Predicate(object):
+    """Holds the `Predicate` data within a `Relation` from a 
+    Core API call. A `Predicate` holds information for verbs.
+    """
+
+    def __init__(
+            self, verb, index, negated, tense, conjugation, phrasalParticle,
+            auxillaryQualifier, verbPrefix, verbSuffix, verbModifiersPrefix,
+            verbModifiersSuffix):
+        self.verb = verb
+        self.index = index
+        self.negated = negated
+        self.tense = tense
+        self.conjugation = conjugation
+        self.phrasalParticle = phrasalParticle
+        self.auxillaryQualifier = auxillaryQualifier
+        self.verbPrefix = verbPrefix
+        self.verbSuffix = verbSuffix
+        self.verbModifiersPrefix = verbModifiersPrefix
+        self.verbModifiersSuffix = verbModifiersSuffix
+
+    def __repr__(self):
+        return '<Predicate %s>' % id(self)
+
+    def __str__(self):
+        return self.verb
+
+    @classmethod
+    def from_json(cls, p):
+        """Builds a `Predicate` from a json object."""
+        verb = utils.deep_get(p, 'verb')
+        index = utils.deep_get(e, 'index')
+        negated = utils.deep_get(p, 'negated')
+        tense = utils.deep_get(p, 'tense')
+        conjugation = utils.deep_get(p, 'conjugation')
+        phrasalParticle = utils.deep_get(p, 'phrasalParticle')
+        auxillaryQualifier = utils.deep_get(p, 'auxillaryQualifier')
+        verbPrefix = utils.deep_get(p, 'verbPrefix')
+        verbSuffix = utils.deep_get(p, 'verbSuffix')
+        verbModifiersPrefix = utils.deep_get(p, 'verbModifiersPrefix')
+        verbModifiersSuffix = utils.deep_get(p, 'verbModifiersSuffix')
+        return cls(
+            verb, index, negated, tense, conjugation, phrasalParticle,
+            auxillaryQualifier, verbPrefix, verbSuffix,
+            verbModifiersPrefix, verbModifiersSuffix)
+
+
+class Preposition(object):
+    """Holds the `Preposition` data within a `Relation` from a 
+    Core API call.
+    """
+
+    def __init__(self, preposition, preposition_object, index):
+        self.preposition = preposition
+        self.index = index
+        self.preposition_object = preposition_object
+
+    def __repr__(self):
+        return '<Preposition %s>' % id(self)
+
+    def __str__(self):
+        return self.preposition
+
+    @classmethod
+    def from_json(cls, p):
+        """Builds a `Predicate` from a json object."""
+        preposition = utils.deep_get(p, 'preposition')
+        index = utils.deep_get(p, 'index')
+        type_ = utils.deep_get(p, 'preposition_object', 'type')
+        preposition_object = (
+            Entity(p['preposition_object']) if type_ == 'entity' else
+            Relation(p['preposition_object']) if type_ == 'relation' else None)
+        return cls(preposition, preposition_object, index)

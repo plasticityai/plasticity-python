@@ -8,8 +8,8 @@ import requests
 
 
 class Plasticity(object):
-    """A Plasticity class that holds the user's API token and location (url) of
-    the API to be used.
+    """A Plasticity class that holds the user's API token and 
+    location (url) of the API to be used.
 
     Attributes:
         token: An API token to authenticate with the API
@@ -44,6 +44,6 @@ class Plasticity(object):
         headers = {}
         headers['content-type'] = "application/json"
         if self.token:
-            headers['authorization'] = "Bearer "+self.token
+            headers['authorization'] = "Bearer " + self.token
         response = requests.request("POST", url, data=data, headers=headers)
         return json.loads(response.text)

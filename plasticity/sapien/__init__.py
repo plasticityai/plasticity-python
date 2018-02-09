@@ -6,8 +6,8 @@ from plasticity.base.service import Service
 
 
 class Sapien(Service):
-    """Sapien is the API service for language. Its functions are described here:
-    https://www.plasticity.ai/api/docs/#sapien
+    """Sapien is the API service for language. Its functions are 
+    described here: https://www.plasticity.ai/api/docs/#sapien
     """
 
     def __init__(self, plasticity):
