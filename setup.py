@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='plasticity',
     packages=find_packages(exclude=['tests', 'tests.*']),
-    version='0.0.1',
+    version='0.0.2',
     description='A Python package for the Plasticity API.',
     author='Plasticity',
     author_email='support@plasticity.ai',
