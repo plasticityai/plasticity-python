@@ -3,11 +3,11 @@ from setuptools import setup, find_packages
 setup(
     name='plasticity',
     packages=find_packages(exclude=['tests', 'tests.*']),
-    version='0.0.2',
+    version='0.0.3',
     description='A Python package for the Plasticity API.',
     author='Plasticity',
-    author_email='support@plasticity.ai',
-    url='https://gitlab.com/Plasticity/plasticity-python',
+    author_email='opensource@plasticity.ai',
+    url='https://github.com/plasticityai/plasticity-python',
     keywords=['plasticity', 'nlp'],
     license='MIT',
     install_requires=[
