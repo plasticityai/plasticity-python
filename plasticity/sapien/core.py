@@ -29,7 +29,7 @@ class Core(Endpoint):
         return self.plasticity._post(self._url, data)
 
     def get_entity_from_role(self, graph, role):
-        return (graph[role] if graph[role] else {}).get('entity', None)
+        return (graph[role] or {}).get('entity', None)
 
     def tpls(self, text, ner=True):
         """Gets each token, its part of speech, and its lemma for each 
@@ -66,8 +66,7 @@ class Core(Endpoint):
         output = []
         if ner:
             for alternative in tpls:
-                alternative_tpls = [tpl[tpl_index] for tpl in alternative]
-                output.append(alternative_tpls)
+                output.append([tpl[tpl_index] for tpl in alternative])
         else:
             output = [tpl[tpl_index] for tpl in tpls]
         return output
@@ -115,10 +114,7 @@ class Core(Endpoint):
         graphs = []
         if ner:
             for d in response.data:
-                alternatives = []
-                for a in d.alternatives:
-                    alternatives.append(a.graph)
-                graphs.append(alternatives)
+                graphs.append([a.graph for a in d.alternatives])
             return graphs
         else:
             for d in response.data:
