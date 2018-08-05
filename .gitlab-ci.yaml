@@ -1,0 +1,66 @@
+stages:
+  - Test
+  - Tag Version
+
+before_script:
+  # Setup package manager
+  - apt-get update 2>&1 >/dev/null
+  - apt-get install curl wget git -y
+  - apt-get install openssh-server -y
+  - apt-get install build-essential -y
+  # Setup SSH configuration
+  - mkdir -p ~/.ssh
+  - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+
+Lint Python:
+  image: python:3
+  stage: Test
+  script:
+    - pip3 install flake8
+    - pip3 install pep8-naming
+    - flake8
+
+Test Python 2:
+  image: python:2
+  stage: Test
+  script:
+    - python setup.py test
+
+Test Python 3:
+  image: python:3
+  stage: Test
+  script:
+    - python3 setup.py test
+
+Tag Version:
+  image: ubuntu:16.04
+  stage: Tag Version
+  script:
+    # Install python, pip, setuptools, and jq
+    - apt-get install python-dev -y
+    - apt-get install python-pip -y
+    - pip install --upgrade setuptools
+    - apt-get install jq -y
+    # Add GitLab SSH private deploy key
+    - eval $(ssh-agent -s)
+    - tmpfile=$(mktemp ~/pk.XXXXXX)
+    - echo "$SSH_PRIVATE_KEY" > $tmpfile
+    - ssh-add $tmpfile
+    - rm $tmpfile
+    # Setup the tagger
+    - rm -rf ../tagger
+    - mkdir -p ../tagger
+    - cd ../tagger
+    - git clone git@gitlab.com:$CI_PROJECT_PATH.git
+    - cd $CI_PROJECT_NAME
+    - git config --global user.email "dev_ci_bot@plasticity.ai"
+    - git config --global user.name "Plasticity Developer Bot"
+    # Tag the Python version
+    - tag=$(python setup.py -V)
+    - (if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then echo "Tag ${tag} already exists. Not re-tagging."; else git tag -a "${tag}" -m "Release ${tag} of $CI_PROJECT_NAME"; fi)
+    # Push the tags
+    - git push origin --tags
+    - cd $CI_PROJECT_DIR
+    - rm -rf ../tagger
+  only:
+    - master
