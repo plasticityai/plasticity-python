@@ -1,3 +1,3 @@
 [flake8]
-exclude = .git,.eggs,__pycache__,docs/source/conf.py,old,build,dist,setup.py,plasticity_utils/third_party,env,venv
+exclude = .git,.eggs,__pycache__,docs/source/conf.py,old,build,dist,setup.py,plasticity/third_party,env,venv
 max_line_length = 79

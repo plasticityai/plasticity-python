@@ -313,7 +313,7 @@ class Relation(object):
     def __init__(
             self, subject, predicate, object_, qualifiers, prepositions,
             verb_modifiers_subject_prefix, verb_modifiers_object_prefix,
-            question, questionAuxillary):
+            question, question_auxiliary):
         self.subject = subject
         self.predicate = predicate
         self.object = object_
@@ -322,7 +322,7 @@ class Relation(object):
         self.verb_modifiers_subject_prefix = verb_modifiers_subject_prefix
         self.verb_modifiers_object_prefix = verb_modifiers_object_prefix
         self.question = question
-        self.questionAuxillary = questionAuxillary
+        self.question_auxiliary = question_auxiliary
 
     def __repr__(self):
         return '<Relation %s>' % id(self)
@@ -349,10 +349,10 @@ class Relation(object):
         vm_subject_prefix = utils.deep_get(r, 'verbModifiersSubjectSuffix')
         vm_object_prefix = utils.deep_get(r, 'verbModifiersObjectSuffix')
         question = utils.deep_get(r, 'question')
-        questionAuxillary = utils.deep_get(r, 'questionAuxillary')
+        question_auxiliary = utils.deep_get(r, 'questionAuxiliary')
         return cls(
             subject, predicate, object_, qualifiers, prepositions,
-            vm_subject_prefix, vm_object_prefix, question, questionAuxillary)
+            vm_subject_prefix, vm_object_prefix, question, question_auxiliary)
 
     def get_entities(self, ner=True):
         """Gets the entities of a `Relation`.
@@ -393,13 +393,13 @@ class Entity(object):
     and objects.
     """
     def __init__(
-            self, entity, index, determiner, properNoun, person,
+            self, entity, index, determiner, proper_noun, person,
             entity_modifiers_prefix, entity_modifiers_suffix,
             possessive_entity, possessive_suffix, ner):
         self.entity = entity
         self.index = index
         self.determiner = determiner
-        self.properNoun = properNoun
+        self.proper_noun = proper_noun
         self.person = person
         self.entity_modifiers_prefix = entity_modifiers_prefix
         self.entity_modifiers_suffix = entity_modifiers_suffix
@@ -419,7 +419,7 @@ class Entity(object):
         entity = utils.deep_get(e, 'entity')
         index = utils.deep_get(e, 'index')
         determiner = utils.deep_get(e, 'determiner')
-        properNoun = utils.deep_get(e, 'properNoun')
+        proper_noun = utils.deep_get(e, 'properNoun')
         person = utils.deep_get(e, 'person')
         entity_modifiers_prefix = utils.deep_get(e, 'entityModifiersPrefix')
         entity_modifiers_suffix = utils.deep_get(e, 'entityModifiersSuffix')
@@ -427,7 +427,7 @@ class Entity(object):
         possessive_suffix = utils.deep_get(e, 'possessive_suffix')
         ner = utils.deep_get(e, 'ner')
         return cls(
-            entity, index, determiner, properNoun, person,
+            entity, index, determiner, proper_noun, person,
             entity_modifiers_prefix, entity_modifiers_suffix,
             possessive_entity, possessive_suffix, ner)
 
