@@ -8,7 +8,7 @@ import requests
 
 
 class Plasticity(object):
-    """A Plasticity class that holds the user's API token and 
+    """A Plasticity class that holds the user's API token and
     location (url) of the API to be used.
 
     Attributes:

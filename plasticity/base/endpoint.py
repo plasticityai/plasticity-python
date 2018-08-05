@@ -4,12 +4,11 @@ from __future__ import print_function
 
 
 class Endpoint(object):
-    """An Endpoint is a specific API action with in an API service.
+    """An Endpoint is a specific API action within an API service.
 
     Attributes:
         plasticity: a Plasticity instance with the API URL and token
     """
-
     def __init__(self, plasticity):
         """Initializes a new Endpoint."""
         self.plasticity = plasticity

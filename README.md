@@ -26,7 +26,7 @@ plasticity = Plasticity("<YOUR_TOKEN>")
 ```
 
 Alternately, a Plasticity constructor without these parameters will look for 
-the PLASTICITY_API_KEY variable inside the current environment.
+the `PLASTICITY_API_KEY` variable inside the current environment.
 
 We suggest storing your credentials as environment variables so that you don't 
 accidentally post them somewhere public.
