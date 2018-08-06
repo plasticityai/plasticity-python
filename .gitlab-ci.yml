@@ -41,7 +41,7 @@ Test Python 2:
 Test Python 3:
   stage: Test
   script:
-    - pip2 install -U pip setuptools
+    - pip3 install -U pip setuptools
     - python3 setup.py test
 
 Deploy to PyPI:
