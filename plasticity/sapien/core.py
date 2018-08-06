@@ -246,6 +246,7 @@ class CoreResponse(Response):
         ner = self.ner()
         data_out = []
         for sg_data, sg_ner in zip(self.data, ner):
+            sentence_group_out = []
             for alt_data, alt_ner in zip(sg_data.alternatives, sg_ner):
                 # Replace the text in the sentence with the named entities
                 new_sentence = alt_data.sentence
@@ -253,7 +254,8 @@ class CoreResponse(Response):
                     for entity in graph:
                         new_sentence = new_sentence.replace(
                             entity['entity'], entity['ner'][0]['label'])
-                data_out.append(new_sentence)
+                sentence_group_out.append(new_sentence)
+            data_out.append(sentence_group_out)
         return data_out
 
 
