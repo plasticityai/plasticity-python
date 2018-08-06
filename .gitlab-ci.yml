@@ -1,3 +1,8 @@
+image: python:latest
+
+services:
+  - docker:dind
+
 stages:
   - Test
   - Deploy to PyPI
@@ -6,30 +11,37 @@ before_script:
   # Setup package manager
   - apt-get update 2>&1 >/dev/null
   - apt-get install curl wget git -y
+  - apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran -y
+  - apt-get install python-setuptools -y
+  - apt-get install python3-setuptools -y
+  - apt-get install python-dev -y
+  - apt-get install python3-dev -y
   - apt-get install openssh-server -y
-  - apt-get install build-essential -y
   # Setup SSH configuration
   - mkdir -p ~/.ssh
   - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+  # Install gettext for envsubst
+  - apt-get install gettext -y
 
-Lint Python:
-  image: python:3
+Lint:
   stage: Test
   script:
     - pip3 install flake8
     - pip3 install pep8-naming
+    - flake8 --version
     - flake8
 
 Test Python 2:
-  image: python:2
   stage: Test
   script:
-    - python setup.py test
+    - apt-get install python-pip -y
+    - pip2 install -U pip setuptools
+    - python2 setup.py test
 
 Test Python 3:
-  image: python:3
   stage: Test
   script:
+    - pip2 install -U pip setuptools
     - python3 setup.py test
 
 Deploy to PyPI:
