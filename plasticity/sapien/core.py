@@ -440,7 +440,7 @@ class Predicate(object):
     """
     def __init__(
             self, verb, index, negated, tense, conjugation, phrasal_particle,
-            auxillary_qualifier, verb_prefix, verb_suffix,
+            auxiliary_qualifier, verb_prefix, verb_suffix,
             verb_modifiers_prefix, verb_modifiers_suffix):
         self.verb = verb
         self.index = index
@@ -448,7 +448,7 @@ class Predicate(object):
         self.tense = tense
         self.conjugation = conjugation
         self.phrasal_particle = phrasal_particle
-        self.auxillary_qualifier = auxillary_qualifier
+        self.auxiliary_qualifier = auxiliary_qualifier
         self.verb_prefix = verb_prefix
         self.verb_suffix = verb_suffix
         self.verb_modifiers_prefix = verb_modifiers_prefix
@@ -469,14 +469,14 @@ class Predicate(object):
         tense = utils.deep_get(p, 'tense')
         conjugation = utils.deep_get(p, 'conjugation')
         phrasal_particle = utils.deep_get(p, 'phrasalParticle')
-        auxillary_qualifier = utils.deep_get(p, 'auxillaryQualifier')
+        auxiliary_qualifier = utils.deep_get(p, 'auxiliaryQualifier')
         verb_prefix = utils.deep_get(p, 'verbPrefix')
         verb_suffix = utils.deep_get(p, 'verbSuffix')
         verb_modifiers_prefix = utils.deep_get(p, 'verbModifiersPrefix')
         verb_modifiers_suffix = utils.deep_get(p, 'verbModifiersSuffix')
         return cls(
             verb, index, negated, tense, conjugation, phrasal_particle,
-            auxillary_qualifier, verb_prefix, verb_suffix,
+            auxiliary_qualifier, verb_prefix, verb_suffix,
             verb_modifiers_prefix, verb_modifiers_suffix)
 
 
