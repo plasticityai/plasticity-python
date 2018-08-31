@@ -50,16 +50,6 @@ class Core(Endpoint):
         return CoreResponse.from_json(
             res, graph_enabled=graph, ner_enabled=ner, pretty_enabled=pretty)
 
-    def get_entity_from_role(self, graph, role):
-        """Gets the entity from a role.
-
-        :param graph: The sentence graph
-        :type graph: dict
-        :param role: The role to get the entity from
-        :type role: str
-        """
-        return (graph[role] or {}).get('entity', None)
-
 
 class CoreResponse(Response):
     """Holds the `CoreResponse` data from a Core API call."""
@@ -67,10 +57,17 @@ class CoreResponse(Response):
         super(CoreResponse, self).__init__(*args, **kwargs)
 
     def __repr__(self):
-        return '<CoreResponse %s>' % id(self)
+        return '<CoreResponse {}>'.format(id(self))
 
     def __str__(self):
-        return '<CoreResponse %s>' % id(self)
+        output = 'CoreResponse'
+        output += ' - {} sentence{}:'.format(
+            len(self.data), '' if len(self.data) == 1 else 's')
+        output += '\n'
+        for d in self.data:
+            output += utils.indent('{}'.format(d))
+            output += '\n'
+        return output
 
     @classmethod
     def from_json(
@@ -171,7 +168,7 @@ class CoreResponse(Response):
         """
         return self._tpl_helper(2)
 
-    def sentence_graph(self):
+    def graphs(self):
         """Handles the Sentence Graph endpoint.
 
         A graph of entities and relationships will appear under the
@@ -188,17 +185,16 @@ class CoreResponse(Response):
         """
         if not self.graph_enabled:
             raise AttributeError('The `graph` flag must be enabled in your '
-                                 'request in order to use `sentence_graph()`.')
+                                 'request in order to use `graphs()`.')
 
         graphs = []
         if self.ner_enabled:
-            for d in self.data:
-                graphs.append([a.graph for a in d.alternatives])
-            return graphs
+            for sentence_group in self.data:
+                graphs.append([a.graph for a in sentence_group.alternatives])
         else:
-            for d in self.data:
-                graphs.append(d.graph)
-            return graphs
+            for sentence in self.data:
+                graphs.append(sentence.graph)
+        return graphs
 
     def ner(self):
         """Handles the Named Entity Recognition endpoint.
@@ -207,6 +203,11 @@ class CoreResponse(Response):
         Returns a 3D list, where each index represents a sentence group.
         Each sentence group has a list of alternatives. Each alternative
         has a list of named entities (and their properties).
+
+        That is, the output is structured as:
+        >>> results[sentence_index][alternative_index]
+        # dict of entities to their token index in the sentence
+
         :returns: The named entities of the text
         :rtype: {list}
         """
@@ -214,47 +215,17 @@ class CoreResponse(Response):
             raise AttributeError('The `ner` flag must be enabled in your '
                                  'request in order to use `ner()`.')
 
-        sentence_graph = self.sentence_graph()
         data_out = []
-        for sentence_group in sentence_graph:
+        for sentence_group in self.data:
             sentence_group_out = []
-            for alternative in sentence_group:
-                alternative_out = []
-                for relation in alternative:
-                    entities = [e for e in relation.get_entities() if e['ner']]
-                    alternative_out.append(entities)
-                sentence_group_out.append(alternative_out)
-            data_out.append(sentence_group_out)
-        return data_out
-
-    def ner_replace(self):
-        """Helper for the Named Entity Recognition endpoint.
-
-        Replaces entities with their corrected form. For example, the sentence
-        "pixar produced toy story" is corrected to "Pixar produced Toy Story".
-        Since NER is enabled for this request, entity-corrected text will be
-        returned for each alternative. Therefore, there may be sentence
-        duplicates in the returned list. There also may be different
-        variations in the returned list.
-        :returns: The entity-correct text alternatives
-        :rtype: {list}
-        """
-        if not self.ner_enabled:
-            raise AttributeError('The `ner` flag must be enabled in your '
-                                 'request in order to use `ner_replace()`.')
-
-        ner = self.ner()
-        data_out = []
-        for sg_data, sg_ner in zip(self.data, ner):
-            sentence_group_out = []
-            for alt_data, alt_ner in zip(sg_data.alternatives, sg_ner):
-                # Replace the text in the sentence with the named entities
-                new_sentence = alt_data.sentence
-                for graph in alt_ner:
-                    for entity in graph:
-                        new_sentence = new_sentence.replace(
-                            entity['entity'], entity['ner'][0]['label'])
-                sentence_group_out.append(new_sentence)
+            for alternative in sentence_group.alternatives:
+                alternative_out = {}
+                if type(alternative) is Sentence:
+                    for graph_item in alternative.graph:
+                        if type(graph_item) is Relation:
+                            entities = graph_item.get_entities(ner_only=True)
+                            alternative_out.update(entities)
+                    sentence_group_out.append(alternative_out)
             data_out.append(sentence_group_out)
         return data_out
 
@@ -267,10 +238,17 @@ class SentenceGroup(object):
         self.alternatives = alternatives
 
     def __repr__(self):
-        return '<SentenceGroup %s>' % id(self)
+        return '<SentenceGroup {}>'.format(id(self))
 
     def __str__(self):
-        return '<SentenceGroup %s>' % id(self)
+        output = 'SentenceGroup'
+        output += ' - {} alternative{}:'.format(
+            len(self.alternatives), '' if len(self.alternatives) == 1 else 's')
+        output += '\n'
+        for a in self.alternatives:
+            output += utils.indent('{}'.format(a))
+            output += '\n'
+        return output
 
     @classmethod
     def from_json(cls, sg):
@@ -292,20 +270,60 @@ class Sentence(object):
         self.tokens = tokens
 
     def __repr__(self):
-        return '<Sentence %s>' % id(self)
+        return '<Sentence {}>'.format(id(self))
 
     def __str__(self):
-        return self.sentence
+        output = 'Sentence:'
+        output += '\n'
+        output += utils.indent(
+            utils.fill('Text: {}'.format(self.sentence)))
+        output += '\n\n'
+        output += utils.indent(
+            utils.shorten('Tokens: {}'.format(str(self.tokens))))
+        output += '\n\n'
+        output += utils.indent(
+            utils.shorten('Dependencies: {}'.format(str(self.dependencies))))
+        output += '\n\n'
+        output += utils.indent('Graph: {} relation{}'.format(
+            len(self.graph), '' if len(self.graph) == 1 else 's'))
+        return output
 
     @classmethod
     def from_json(cls, s):
         """Builds a `Sentence` from a json object."""
-        graph = [Relation.from_json(g) for g in s.get('graph', [])
-                 if g.get('type') == 'relation']
+        graph = Graph.from_json(s.get('graph', []))
         dependencies = utils.deep_get(s, 'dependencies')
         sentence = utils.deep_get(s, 'sentence')
         tokens = utils.deep_get(s, 'tokens')
         return cls(sentence, tokens, graph, dependencies)
+
+
+class Graph(list):
+    """Holds the `Graph` data within a `Sentence` from a
+    Core API call.
+    """
+    def __init__(self, *args, **kwargs):
+        super(Graph, self).__init__(args[0])
+
+    def __repr__(self):
+        return '<Graph {}>'.format(id(self))
+
+    def __str__(self):
+        output = 'Graph'
+        output += ' - {} relation{}:'.format(
+            len(self), '' if len(self) == 1 else 's')
+        output += '\n'
+        for x in self:
+            output += utils.indent('{}'.format(x))
+            output += '\n'
+        return output
+
+    @classmethod
+    def from_json(cls, g):
+        """Builds a `Graph` from a json object."""
+        graph = [Relation.from_json(x) for x in g
+                 if x.get('type') == 'relation']
+        return cls(graph)
 
 
 class Relation(object):
@@ -327,10 +345,21 @@ class Relation(object):
         self.question_auxiliary = question_auxiliary
 
     def __repr__(self):
-        return '<Relation %s>' % id(self)
+        return '<Relation {}>'.format(id(self))
 
     def __str__(self):
-        return '<Relation %s>' % id(self)
+        output = 'Relation:'
+        output += '\n'
+        output += utils.indent('Subject: {}'.format(repr(self.subject)))
+        output += '\n'
+        output += utils.indent('Predicate: {}'.format(repr(self.predicate)))
+        output += '\n'
+        output += utils.indent('Object: {}'.format(repr(self.object)))
+        output += '\n'
+        output += utils.indent(utils.shorten(
+            'Prepositions: {}'.format(str(self.prepositions))))
+        output += '\n'
+        return output
 
     @classmethod
     def from_json(cls, r):
@@ -356,14 +385,14 @@ class Relation(object):
             subject, predicate, object_, qualifiers, prepositions,
             vm_subject_prefix, vm_object_prefix, question, question_auxiliary)
 
-    def get_entities(self, ner=True):
+    def get_entities(self, ner_only=False):
         """Gets the entities of a `Relation`.
 
         Gets the named entities from a relation by cycling through
         the subjects and objects deeply.
-        :param ner: Whether or not to return the NER values, defaults to True
-        :type ner: bool, optional
-        :returns: The index of each entity to the entities themselves
+        :param ner_only: Only entities with NER values, defaults to False
+        :type ner_only: bool, optional
+        :returns: A dict of entities found in the Relation by their index
         :rtype: {dict}
         """
         def get_entities_helper(x, entities={}):
@@ -375,18 +404,22 @@ class Relation(object):
             :type entities: dict, optional
             """
             if type(x) is Entity:
-                if x.index not in entities:
-                    values = {}
-                    values['index'] = x.index
-                    values['entity'] = x.entity
-                    if ner:
-                        values['ner'] = x.ner
-                    entities[x.index] = values
+                if not ner_only or (ner_only and x.ner):
+                    if x.index not in entities:
+                        values = {}
+                        values['index'] = x.index
+                        values['entity'] = x.entity
+                        if x.ner:
+                            values['ner'] = x.ner
+                        entities[x.index] = values
             elif type(x) is Relation:
                 get_entities_helper(x.subject, entities)
                 get_entities_helper(x.object, entities)
-            return entities.values()
-        return get_entities_helper(self)
+                for preposition in x.prepositions:
+                    get_entities_helper(preposition.preposition_object)
+            return entities
+        entities = get_entities_helper(self)
+        return entities
 
 
 class Entity(object):
@@ -410,10 +443,24 @@ class Entity(object):
         self.ner = ner
 
     def __repr__(self):
-        return '<Entity %s>' % id(self)
+        return '<Entity {}>'.format(id(self))
 
     def __str__(self):
-        return self.entity
+        output = 'Entity:'
+        output += '\n'
+        output += utils.indent('Index: {}'.format(self.index))
+        output += '\n'
+        output += utils.indent('Determiner: {}'.format(self.determiner))
+        output += '\n'
+        output += utils.indent('Entity: {}'.format(self.entity))
+        output += '\n'
+        output += utils.indent(utils.shorten(
+            'Modifiers Prefix: {}'.format(str(self.entity_modifiers_prefix))))
+        output += '\n'
+        output += utils.indent(utils.shorten(
+            'Modifiers Suffix: {}'.format(str(self.entity_modifiers_suffix))))
+        output += '\n'
+        return output
 
     @classmethod
     def from_json(cls, e):
@@ -427,7 +474,9 @@ class Entity(object):
         entity_modifiers_suffix = utils.deep_get(e, 'entityModifiersSuffix')
         possessive_entity = utils.deep_get(e, 'possessive_entity')
         possessive_suffix = utils.deep_get(e, 'possessive_suffix')
-        ner = utils.deep_get(e, 'ner')
+        ner = [Concept.from_json(c)
+               for c in utils.deep_get(e, 'ner')
+               if c.get('type') == 'concept']
         return cls(
             entity, index, determiner, proper_noun, person,
             entity_modifiers_prefix, entity_modifiers_suffix,
@@ -455,10 +504,26 @@ class Predicate(object):
         self.verb_modifiers_suffix = verb_modifiers_suffix
 
     def __repr__(self):
-        return '<Predicate %s>' % id(self)
+        return '<Predicate {}>'.format(id(self))
 
     def __str__(self):
-        return self.verb
+        output = 'Predicate:'
+        output += '\n'
+        output += utils.indent('Index: {}'.format(self.index))
+        output += '\n'
+        output += utils.indent('Verb: {}'.format(self.determiner))
+        output += '\n'
+        output += utils.indent('Prefix: {}'.format(self.verb_prefix))
+        output += '\n'
+        output += utils.indent('Suffix: {}'.format(self.verb_suffix))
+        output += '\n'
+        output += utils.indent(utils.shorten(
+            'Modifiers Prefix: {}'.format(str(self.verb_modifiers_prefix))))
+        output += '\n'
+        output += utils.indent(utils.shorten(
+            'Modifiers Suffix: {}'.format(str(self.verb_modifiers_suffix))))
+        output += '\n'
+        return output
 
     @classmethod
     def from_json(cls, p):
@@ -490,10 +555,18 @@ class Preposition(object):
         self.preposition_object = preposition_object
 
     def __repr__(self):
-        return '<Preposition %s>' % id(self)
+        return '<Preposition {}>'.format(id(self))
 
     def __str__(self):
-        return self.preposition
+        output = 'Preposition:'
+        output += '\n'
+        output += utils.indent('Index: {}'.format(self.index))
+        output += '\n'
+        output += utils.indent('Preposition: {}'.format(self.preposition))
+        output += '\n'
+        output += utils.indent('Object: {}'.format(self.preposition_object))
+        output += '\n'
+        return output
 
     @classmethod
     def from_json(cls, p):
@@ -506,3 +579,35 @@ class Preposition(object):
             Relation.from_json(p['prepositionObject']) if type_ == 'relation'
             else None)
         return cls(preposition, preposition_object, index)
+
+
+class Concept(object):
+    """Holds the `Concept` data within an `Entity` from a
+    Core API call.
+    """
+    def __init__(self, label, id_, freebase_id):
+        self.label = label
+        self.id_ = id_
+        self.freebase_id = freebase_id
+
+    def __repr__(self):
+        return '<Concept {}>'.format(id(self))
+
+    def __str__(self):
+        output = 'Concept:'
+        output += '\n'
+        output += utils.indent('Label: {}'.format(self.label))
+        output += '\n'
+        output += utils.indent('ID: {}'.format(self.id_))
+        output += '\n'
+        output += utils.indent('Freebase ID: {}'.format(self.freebase_id))
+        output += '\n'
+        return output
+
+    @classmethod
+    def from_json(cls, c):
+        """Builds a `Concept` from a json object."""
+        label = c.get('label')
+        id_ = c.get('id')
+        freebase_id = c.get('freebaseIdentifier')
+        return cls(label, id_, freebase_id)

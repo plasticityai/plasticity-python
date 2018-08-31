@@ -22,10 +22,10 @@ class Response(object):
         self.pretty_enabled = pretty_enabled
 
     def __repr__(self):
-        return '<Response %s>' % id(self)
+        return '<Response {}>'.format(id(self))
 
     def __str__(self):
-        return '<Response %s>' % id(self)
+        return '<Response {}>'.format(id(self))
 
     @classmethod
     def from_json(cls, res, **kwargs):
