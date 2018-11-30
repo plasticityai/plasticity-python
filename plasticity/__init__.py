@@ -46,4 +46,7 @@ class Plasticity(object):
         if self.token:
             headers['authorization'] = "Bearer " + self.token
         response = requests.request("POST", url, data=data, headers=headers)
-        return json.loads(response.text)
+        try:
+            return json.loads(response.text)
+        except ValueError:
+            return json.loads(response.text[:response.text.rfind('<!DOCTYPE')])

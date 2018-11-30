@@ -61,12 +61,18 @@ class CoreResponse(Response):
 
     def __str__(self):
         output = 'CoreResponse'
-        output += ' - {} sentence{}:'.format(
-            len(self.data), '' if len(self.data) == 1 else 's')
-        output += '\n'
-        for d in self.data:
-            output += utils.indent('{}'.format(d))
+        if self.error:
+            output += ' - {} error:'.format(self.error_code)
             output += '\n'
+            output += utils.indent(
+                utils.shorten('{}'.format(self.error_message)))
+        else:
+            output += ' - {} sentence{}:'.format(
+                len(self.data), '' if len(self.data) == 1 else 's')
+            output += '\n'
+            for d in self.data:
+                output += utils.indent('{}'.format(d))
+                output += '\n'
         return output
 
     @classmethod
@@ -80,9 +86,12 @@ class CoreResponse(Response):
                 data.append(SentenceGroup.from_json(d))
             elif d['type'] == 'sentence':
                 data.append(Sentence.from_json(d))
-        error = utils.deep_get(res, 'error')
+        error = res.get('error')
+        error_code = res.get('errorCode')
+        error_message = res.get('message')
         return cls(
-            data, error, graph_enabled=graph_enabled, ner_enabled=ner_enabled,
+            data, error, error_code, error_message,
+            graph_enabled=graph_enabled, ner_enabled=ner_enabled,
             pretty_enabled=pretty_enabled)
 
     def tpls(self):
@@ -211,9 +220,9 @@ class CoreResponse(Response):
         :returns: The named entities of the text
         :rtype: {list}
         """
-        if not self.ner_enabled:
-            raise AttributeError('The `ner` flag must be enabled in your '
-                                 'request in order to use `ner()`.')
+        if not self.ner_enabled or not self.graph_enabled:
+            raise AttributeError('The `ner` and `graph` flags must be enabled '
+                                 'in your request in order to use `ner()`.')
 
         data_out = []
         for sentence_group in self.data:
@@ -264,10 +273,23 @@ class Sentence(object):
     `SentenceGroup` from a Core API call.
     """
     def __init__(self, sentence, tokens, graph, dependencies):
-        self.graph = graph
-        self.dependencies = dependencies
+        """Initializes a new `Sentence`.
+
+        Creates a `Sentence` object which holds th
+        :param sentence: The sentence text
+        :type sentence: string
+        :param tokens: A list of the tokens in the sentence
+        :type tokens: list
+        :param graph: A graph of the relations in the sentence
+                      (or none if graph is disabled in the request)
+        :type graph: None|list
+        :param dependencies: A list of the token dependencies in the sentence
+        :type dependencies: list
+        """
         self.sentence = sentence
         self.tokens = tokens
+        self.graph = graph
+        self.dependencies = dependencies
 
     def __repr__(self):
         return '<Sentence {}>'.format(id(self))
@@ -283,24 +305,30 @@ class Sentence(object):
         output += '\n\n'
         output += utils.indent(
             utils.shorten('Dependencies: {}'.format(str(self.dependencies))))
-        output += '\n\n'
-        output += utils.indent('Graph: {} relation{}'.format(
-            len(self.graph), '' if len(self.graph) == 1 else 's'))
+        if self.graph is not None:
+            output += '\n\n'
+            output += utils.indent('Graph: {} relation{}'.format(
+                len(self.graph), '' if len(self.graph) == 1 else 's'))
         return output
 
     @classmethod
     def from_json(cls, s):
         """Builds a `Sentence` from a json object."""
-        graph = Graph.from_json(s.get('graph', []))
-        dependencies = utils.deep_get(s, 'dependencies')
-        sentence = utils.deep_get(s, 'sentence')
-        tokens = utils.deep_get(s, 'tokens')
+        sentence = s.get('sentence')
+        tokens = s.get('tokens')
+        graph = s.get('graph')
+        if graph is not None:
+            graph = Graph.from_json(graph)
+        dependencies = s.get('dependencies')
         return cls(sentence, tokens, graph, dependencies)
 
 
 class Graph(list):
     """Holds the `Graph` data within a `Sentence` from a
     Core API call.
+
+    Returns a `Graph`, which will be an empty list or a list with each
+    `Relation` contained in the `Sentence`.
     """
     def __init__(self, *args, **kwargs):
         super(Graph, self).__init__(args[0])
@@ -375,12 +403,12 @@ class Relation(object):
         prepositions = [Preposition.from_json(p)
                         for p in r.get('prepositions', [])
                         if p.get('type') == 'preposition']
-        predicate = Predicate.from_json(utils.deep_get(r, 'predicate'))
-        qualifiers = utils.deep_get(r, 'qualifiers')
-        vm_subject_prefix = utils.deep_get(r, 'verbModifiersSubjectSuffix')
-        vm_object_prefix = utils.deep_get(r, 'verbModifiersObjectSuffix')
-        question = utils.deep_get(r, 'question')
-        question_auxiliary = utils.deep_get(r, 'questionAuxiliary')
+        predicate = Predicate.from_json(r.get('predicate'))
+        qualifiers = r.get('qualifiers')
+        vm_subject_prefix = r.get('verbModifiersSubjectSuffix')
+        vm_object_prefix = r.get('verbModifiersObjectSuffix')
+        question = r.get('question')
+        question_auxiliary = r.get('questionAuxiliary')
         return cls(
             subject, predicate, object_, qualifiers, prepositions,
             vm_subject_prefix, vm_object_prefix, question, question_auxiliary)
@@ -465,18 +493,19 @@ class Entity(object):
     @classmethod
     def from_json(cls, e):
         """Builds an `Entity` from a json object."""
-        entity = utils.deep_get(e, 'entity')
-        index = utils.deep_get(e, 'index')
-        determiner = utils.deep_get(e, 'determiner')
-        proper_noun = utils.deep_get(e, 'properNoun')
-        person = utils.deep_get(e, 'person')
-        entity_modifiers_prefix = utils.deep_get(e, 'entityModifiersPrefix')
-        entity_modifiers_suffix = utils.deep_get(e, 'entityModifiersSuffix')
-        possessive_entity = utils.deep_get(e, 'possessive_entity')
-        possessive_suffix = utils.deep_get(e, 'possessive_suffix')
-        ner = [Concept.from_json(c)
-               for c in utils.deep_get(e, 'ner')
-               if c.get('type') == 'concept']
+        entity = e.get('entity')
+        index = e.get('index')
+        determiner = e.get('determiner')
+        proper_noun = e.get('properNoun')
+        person = e.get('person')
+        entity_modifiers_prefix = e.get('entityModifiersPrefix')
+        entity_modifiers_suffix = e.get('entityModifiersSuffix')
+        possessive_entity = e.get('possessive_entity')
+        possessive_suffix = e.get('possessive_suffix')
+        ner = e.get('ner')
+        if ner is not None:
+            ner = [Concept.from_json(c) for c in ner
+                   if c.get('type') == 'concept']
         return cls(
             entity, index, determiner, proper_noun, person,
             entity_modifiers_prefix, entity_modifiers_suffix,
@@ -528,17 +557,17 @@ class Predicate(object):
     @classmethod
     def from_json(cls, p):
         """Builds a `Predicate` from a json object."""
-        verb = utils.deep_get(p, 'verb')
-        index = utils.deep_get(p, 'index')
-        negated = utils.deep_get(p, 'negated')
-        tense = utils.deep_get(p, 'tense')
-        conjugation = utils.deep_get(p, 'conjugation')
-        phrasal_particle = utils.deep_get(p, 'phrasalParticle')
-        auxiliary_qualifier = utils.deep_get(p, 'auxiliaryQualifier')
-        verb_prefix = utils.deep_get(p, 'verbPrefix')
-        verb_suffix = utils.deep_get(p, 'verbSuffix')
-        verb_modifiers_prefix = utils.deep_get(p, 'verbModifiersPrefix')
-        verb_modifiers_suffix = utils.deep_get(p, 'verbModifiersSuffix')
+        verb = p.get('verb')
+        index = p.get('index')
+        negated = p.get('negated')
+        tense = p.get('tense')
+        conjugation = p.get('conjugation')
+        phrasal_particle = p.get('phrasalParticle')
+        auxiliary_qualifier = p.get('auxiliaryQualifier')
+        verb_prefix = p.get('verbPrefix')
+        verb_suffix = p.get('verbSuffix')
+        verb_modifiers_prefix = p.get('verbModifiersPrefix')
+        verb_modifiers_suffix = p.get('verbModifiersSuffix')
         return cls(
             verb, index, negated, tense, conjugation, phrasal_particle,
             auxiliary_qualifier, verb_prefix, verb_suffix,
@@ -571,8 +600,8 @@ class Preposition(object):
     @classmethod
     def from_json(cls, p):
         """Builds a `Predicate` from a json object."""
-        preposition = utils.deep_get(p, 'preposition')
-        index = utils.deep_get(p, 'index')
+        preposition = p.get('preposition')
+        index = p.get('index')
         type_ = utils.deep_get(p, 'prepositionObject', 'type')
         preposition_object = (
             Entity.from_json(p['prepositionObject']) if type_ == 'entity' else

@@ -18,8 +18,9 @@ def deep_get(dictionary, *keys):
     :returns: The value at the key sequence or `None`
     :rtype: {any}
     """
-    return reduce(lambda d, key: d.get(key, None) if isinstance(d, dict)
-                  else None, keys, dictionary)
+    return reduce(lambda d, key:
+                  d.get(key, None) if isinstance(d, dict) else None,
+                  keys, dictionary)
 
 
 def indent(text, prefix='\t'):

@@ -22,7 +22,7 @@ directly to the constructor (see the code below) or via environment variables.
 
 ```python
 from plasticity import Plasticity
-plasticity = Plasticity("<YOUR_TOKEN>")
+plasticity = Plasticity('<YOUR_TOKEN>')
 ```
 
 Alternately, a Plasticity constructor without these parameters will look for 
