@@ -7,9 +7,7 @@ you can download the source code for `plasticity-python` and setup the module
 by running:
 
 ```sh
-git clone https://gitlab.com/Plasticity/plasticity-python.git
-cd plasticity-python
-python setup.py install
+pip install git+https://github.com/plasticityai/plasticity-python.git
 ```
 
 ## Getting Started
@@ -35,3 +33,4 @@ accidentally post them somewhere public.
 from plasticity import Plasticity
 plasticity = Plasticity()
 ```
+
