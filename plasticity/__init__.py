@@ -44,10 +44,6 @@ class Plasticity(object):
             self._cortex = Cortex(self)
         return self._cortex
 
-    @property
-    def PlasticityAPIError(self):
-        return PlasticityAPIError
-
     def _post(self, url, data):
         headers = {}
         headers['content-type'] = "application/json"
