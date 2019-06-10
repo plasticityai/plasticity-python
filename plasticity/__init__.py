@@ -6,8 +6,10 @@ import os
 import json
 import requests
 
+
 class PlasticityAPITimeoutError(Exception):
     pass
+
 
 class Plasticity(object):
     """A Plasticity class that holds the user's API token and
@@ -48,9 +50,10 @@ class Plasticity(object):
         if self.token:
             headers['authorization'] = "Bearer " + self.token
         try:
-            response = requests.request("POST", url, data=data, headers=headers, timeout=timeout)
+            response = requests.request(
+                "POST", url, data=data, headers=headers, timeout=timeout)
         except requests.exceptions.Timeout:
-            raise PlasticityAPITimeoutError("The request timed out.") 
+            raise PlasticityAPITimeoutError("The request timed out.")
         try:
             return json.loads(response.text)
         except ValueError:
