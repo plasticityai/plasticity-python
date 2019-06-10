@@ -6,6 +6,8 @@ import os
 import json
 import requests
 
+class PlasticityAPIError(Exception):
+    pass
 
 class Plasticity(object):
     """A Plasticity class that holds the user's API token and
@@ -39,6 +41,10 @@ class Plasticity(object):
             from plasticity.cortex import Cortex
             self._cortex = Cortex(self)
         return self._cortex
+    
+    @property
+    def PlasticityAPIError(self):
+        return PlasticityAPIError
 
     def _post(self, url, data):
         headers = {}
@@ -46,6 +52,8 @@ class Plasticity(object):
         if self.token:
             headers['authorization'] = "Bearer " + self.token
         response = requests.request("POST", url, data=data, headers=headers)
+        if response.status_code != 200:
+            raise PlasticityAPIError(response.text)
         try:
             return json.loads(response.text)
         except ValueError:
