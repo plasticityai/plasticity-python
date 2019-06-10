@@ -6,8 +6,10 @@ import os
 import json
 import requests
 
+
 class PlasticityAPIError(Exception):
     pass
+
 
 class Plasticity(object):
     """A Plasticity class that holds the user's API token and
@@ -41,7 +43,7 @@ class Plasticity(object):
             from plasticity.cortex import Cortex
             self._cortex = Cortex(self)
         return self._cortex
-    
+
     @property
     def PlasticityAPIError(self):
         return PlasticityAPIError
