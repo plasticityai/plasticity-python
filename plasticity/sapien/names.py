@@ -18,7 +18,7 @@ class Names(Endpoint):
         super(Names, self).__init__(plasticity)
         self.url = self.plasticity.sapien.url + "names/"
 
-    def post(self, name, pretty=False):
+    def post(self, name, pretty=False, timeout=None):
         """Makes a post to the Names API.
 
         Runs the name with the requested parameters through the Sapien
@@ -34,7 +34,7 @@ class Names(Endpoint):
             'name': name,
             'pretty': pretty,
         })
-        res = self.plasticity._post(self.url, payload)
+        res = self.plasticity._post(self.url, payload, timeout=timeout)
         return NamesResponse.from_json(res, pretty_enabled=pretty)
 
 
