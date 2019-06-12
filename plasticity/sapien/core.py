@@ -2,17 +2,61 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import json
-
 from plasticity.utils import utils
 from plasticity.base.endpoint import Endpoint
-from plasticity.base.response import Response
 
 
 class Core(Endpoint):
     """The Core Endpoint performs all the Core API functions described
     here: https://www.plasticity.ai/api/docs/#sapien-core
+
+    Basic usage:
+
+    ```python
+    plasticity.sapien.core.post('This is an example.')
+    ```
+
+
+    Arguments:
+
+    text: required
+    graph: optional, defaults to True
+    ner: optional, defaults to True
+    pretty: optional, defaults to False
+
+    ```python
+    plasticity.sapien.core.post('This is an example without NER.', ner=False)
+    ```
+
+
+    Returns:
+
+    This returns a custom `Core.Response`, which converts the `data`
+    property of a normal `Response` object into either a list of alternative
+    `SentenceGroup`s (if NER is enabled) or a list of `Sentence`s. You can
+    also use any of the helper methods, documented in the `Core.Response` class
+    below.
+
+    ```python
+    result = plasticity.sapien.core.post('This is an example.')
+    result.tpls()
+    ```
+
+    ```python
+    result = plasticity.sapien.core.post('Play let it be by The Beatles.')
+    for sentence_group in result.data:
+        for sentence in sentence_group.alternatives:
+            print(sentence.graph)
+    ```
     """
+    NAME = 'Core'
+    PARAMS = [
+        ('text',),
+        ('graph', True),
+        ('ner', True),
+        ('pretty', False)
+    ]
+
     def __init__(self, plasticity):
         """Initializes a new Core Endpoint.
 
@@ -22,221 +66,213 @@ class Core(Endpoint):
         :type plasticity: Plasticity
         """
         super(Core, self).__init__(plasticity)
-        self.url = self.plasticity.sapien.url + "core/"
+        self.url = self.plasticity.sapien.url + 'core/'
 
-    def post(self, text, graph=True, ner=True, pretty=False):
-        """Makes a post to the Core API.
+    class Response(Endpoint.Response):
+        def __init__(self, response):
+            super(Core.Response, self).__init__(response)
+            new_data = []
+            for d in (self.data or []):
+                if d['type'] == 'sentenceGroup':
+                    new_data.append(SentenceGroup.from_json(d))
+                elif d['type'] == 'sentence':
+                    new_data.append(Sentence.from_json(d))
+            self.data = new_data
+            self.graph_enabled = self.request.get(
+                'graph', Core.get_param_default('graph'))
+            self.ner_enabled = self.request.get(
+                'ner', Core.get_param_default('ner'))
 
-        Runs the text with the requested parameters through the Sapien
-        Core API.
-        :param text: The sentence or sentences to analyze
-        :type text: str
-        :param graph: Whether or not to enable the graph, defaults to True
-        :type graph: bool, optional
-        :param ner: Whether or not to enable NER, defaults to True
-        :type ner: bool, optional
-        :param pretty: Whether or not to pretty print, defaults to False
-        :type pretty: bool, optional
-        :returns: The response from the API endpoint
-        :rtype: {CoreResponse}
-        """
-        payload = json.dumps({
-            'text': text,
-            'graph': graph,
-            'ner': ner,
-            'pretty': pretty,
-        })
-        res = self.plasticity._post(self.url, payload)
-        return CoreResponse.from_json(
-            res, graph_enabled=graph, ner_enabled=ner, pretty_enabled=pretty)
-
-
-class CoreResponse(Response):
-    """Holds the `CoreResponse` data from a Core API call."""
-    def __init__(self, *args, **kwargs):
-        super(CoreResponse, self).__init__(*args, **kwargs)
-
-    def __repr__(self):
-        return '<CoreResponse {}>'.format(id(self))
-
-    def __str__(self):
-        output = 'CoreResponse'
-        if self.error:
-            output += ' - {} error:'.format(self.error_code)
-            output += '\n'
-            output += utils.indent(
-                utils.shorten('{}'.format(self.error_message)))
-        else:
-            output += ' - {} sentence{}:'.format(
-                len(self.data), '' if len(self.data) == 1 else 's')
-            output += '\n'
-            for d in self.data:
-                output += utils.indent('{}'.format(d))
+        def __str__(self):
+            """Pretty prints important details about the Core Response."""
+            output = 'Core Response'
+            if self.error:
+                output += ' - {} error:'.format(self.error_code)
                 output += '\n'
-        return output
+                output += utils.indent(
+                    utils.shorten('{}'.format(self.error_message)))
+            else:
+                output += ' - {} sentence{}:'.format(
+                    len(self.data), '' if len(self.data) == 1 else 's')
+                output += '\n'
+                for d in self.data:
+                    output += utils.indent('{}'.format(d))
+                    output += '\n'
+            return output
 
-    @classmethod
-    def from_json(
-            cls, res, graph_enabled=True, ner_enabled=True,
-            pretty_enabled=False):
-        """Builds a `CoreResponse` from a json object."""
-        data = []
-        for d in res.get('data', []):
-            if d['type'] == 'sentenceGroup':
-                data.append(SentenceGroup.from_json(d))
-            elif d['type'] == 'sentence':
-                data.append(Sentence.from_json(d))
-        error = res.get('error')
-        error_code = res.get('errorCode')
-        error_message = res.get('message')
-        return cls(
-            data, error, error_code, error_message,
-            graph_enabled=graph_enabled, ner_enabled=ner_enabled,
-            pretty_enabled=pretty_enabled)
+        def tpls(self):
+            """Gets the token/POS/lemma of text.
 
-    def tpls(self):
-        """Gets the token/POS/lemma of text.
+            Gets each token, its part of speech, and its lemma for each
+            token in the text.
 
-        Gets each token, its part of speech, and its lemma for each
-        token in the text.
+            If ner was enabled, returns a 2D list, where each index is
+            another list containing the [token, POS, lemma]s for each
+            alternative. If ner was disabled, returns a list, where each
+            index is a [token, POS, lemma].
+            :returns: The t/p/l's of the text (token, POS, lemma)
+            :rtype: {list}
+            """
+            output = []
+            if self.ner_enabled:
+                for sentence_group in self.data:
+                    alternative_tpls = []
+                    for sentence in sentence_group.alternatives:
+                        alternative_tpls.extend(sentence.tokens)
+                    output.append(alternative_tpls)
+            else:
+                for sentence in self.data:
+                    output.extend(sentence.tokens)
+            return output
 
-        If ner was enabled, returns a 2D list, where each index is
-        another list containing the [token, POS, lemma]s for each
-        alternative. If ner was disabled, returns a list, where each
-        index is a [token, POS, lemma].
-        :returns: The t/p/l's of the text (token, POS, lemma)
-        :rtype: {list}
-        """
-        output = []
-        if self.ner_enabled:
+        def _tpl_helper(self, tpl_index):
+            """A helper for the `tpls()` function.
+
+            Returns either the tokens, pos's, or lemmas for a text.
+            Set tpl_index to 0 for tokens, 1 for pos, or 2 for lemmas.
+
+            If ner was enabled, returns a 2D list, where each index is
+            another list containing the t/p/l for each alternative. If
+            ner was disabled, returns a list, where each index is a t/p/l.
+            """
+            tpls = self.tpls()
+            output = []
+            if self.ner_enabled:
+                for alternative in tpls:
+                    output.append([tpl[tpl_index] for tpl in alternative])
+            else:
+                output = [tpl[tpl_index] for tpl in tpls]
+            return output
+
+        def tokenize(self):
+            """Handles the Tokenization endpoint.
+
+            Tokenizes each word in the text.
+
+            If ner was enabled, returns a 2D list, where each index is another
+            list containing the tokens for each alternative. If ner was
+            disabled, returns a list, where each index is a token.
+            :returns: The tokens of the text
+            :rtype: {list}
+            """
+            return self._tpl_helper(0)
+
+        def parts_of_speech(self):
+            """Handles the Parts of Speech endpoint.
+
+            Gets the parts of speech of each token in the text.
+
+            If ner was enabled, returns a 2D list, where each index is another
+            list containing the POSs for each alternative. If ner was
+            disabled, returns a list, where each index is a POS.
+            :returns: The parts of speech of the text
+            :rtype: {list}
+            """
+            return self._tpl_helper(1)
+
+        def lemmatize(self):
+            """Handles the Lemmatization endpoint.
+
+            Gets the lemmas of each token in the text.
+
+            If ner was enabled, returns a 2D list, where each index is another
+            list containing the lemmas for each alternative. If ner was
+            disabled, returns a list, where each index is a lemma.
+            :returns: The parts of speech of the text
+            :rtype: {list}
+            """
+            return self._tpl_helper(2)
+
+        def graphs(self):
+            """Handles the Sentence Graph endpoint.
+
+            A graph of entities and relationships will appear under the
+            graph key for each sentence. This task provides similar information
+            to the relation extraction task or open information extraction task
+            in NLP.
+
+            If ner was enabled, returns a 3D list, where each index represents
+            a sentence group. Each sentence group has a list of alternatives.
+            Each alternative has a graph of relation(s). If ner was disabled,
+            returns a list, where each index is the graph for that sentence.
+            :returns: The graphs of the text
+            :rtype: {list}
+            """
+            if not self.graph_enabled:
+                raise AttributeError('The `graph` flag must be enabled '
+                                     'in your request in order to use '
+                                     '`graphs()`.')
+
+            graphs = []
+            if self.ner_enabled:
+                for sentence_group in self.data:
+                    graphs.append(
+                        [a.graph for a in sentence_group.alternatives])
+            else:
+                for sentence in self.data:
+                    graphs.append(sentence.graph)
+            return graphs
+
+        def dependencies(self):
+            """Gets the syntax dependency trees of text.
+
+            The first element in the array is the index of the dependent word.
+            The second element in the array is the index of the head word
+            (or governor). The third element in the array is the name of the
+            dependency relation.
+
+            If ner was enabled, returns a 2D list, where each index is
+            another list containing the [index, index, name]s for each
+            alternative. If ner was disabled, returns a list, where each
+            index is a [index, index, name].
+            :returns: The dependencies of the text (index, index, name)
+            :rtype: {list}
+            """
+            output = []
+            if self.ner_enabled:
+                for sentence_group in self.data:
+                    alternative_dependencies = []
+                    for sentence in sentence_group.alternatives:
+                        alternative_dependencies.extend(sentence.dependencies)
+                    output.append(alternative_dependencies)
+            else:
+                for sentence in self.data:
+                    output.extend(sentence.dependencies)
+            return output
+
+        def ner(self):
+            """Handles the Named Entity Recognition endpoint.
+
+            Provides named entity suggestions for each relation in the text.
+            Returns a 3D list, where each index represents a sentence group.
+            Each sentence group has a list of alternatives. Each alternative
+            has a list of named entities (and their properties).
+
+            That is, the output is structured as:
+            >>> results[sentence_index][alternative_index]
+            # dict of entities to their token index in the sentence
+
+            :returns: The named entities of the text
+            :rtype: {list}
+            """
+            if not self.ner_enabled or not self.graph_enabled:
+                raise AttributeError('The `ner` and `graph` flags must '
+                                     'be enabled in your request in order '
+                                     'to use `ner()`.')
+
+            data_out = []
             for sentence_group in self.data:
-                alternative_tpls = []
-                for sentence in sentence_group.alternatives:
-                    alternative_tpls.extend(sentence.tokens)
-                output.append(alternative_tpls)
-        else:
-            for sentence in self.data:
-                output.extend(sentence.tokens)
-        return output
-
-    def _tpl_helper(self, tpl_index):
-        """A helper for the `tpls()` function.
-
-        Returns either the tokens, pos's, or lemmas for a text.
-        Set tpl_index to 0 for tokens, 1 for pos, or 2 for lemmas.
-
-        If ner was enabled, returns a 2D list, where each index is
-        another list containing the t/p/l for each alternative. If
-        ner was disabled, returns a list, where each index is a t/p/l.
-        """
-        tpls = self.tpls()
-        output = []
-        if self.ner_enabled:
-            for alternative in tpls:
-                output.append([tpl[tpl_index] for tpl in alternative])
-        else:
-            output = [tpl[tpl_index] for tpl in tpls]
-        return output
-
-    def tokenize(self):
-        """Handles the Tokenization endpoint.
-
-        Tokenizes each word in the text.
-
-        If ner was enabled, returns a 2D list, where each index is another
-        list containing the tokens for each alternative. If ner was
-        disabled, returns a list, where each index is a token.
-        :returns: The tokens of the text
-        :rtype: {list}
-        """
-        return self._tpl_helper(0)
-
-    def parts_of_speech(self):
-        """Handles the Parts of Speech endpoint.
-
-        Gets the parts of speech of each token in the text.
-
-        If ner was enabled, returns a 2D list, where each index is another
-        list containing the POSs for each alternative. If ner was
-        disabled, returns a list, where each index is a POS.
-        :returns: The parts of speech of the text
-        :rtype: {list}
-        """
-        return self._tpl_helper(1)
-
-    def lemmatize(self):
-        """Handles the Lemmatization endpoint.
-
-        Gets the lemmas of each token in the text.
-
-        If ner was enabled, returns a 2D list, where each index is another
-        list containing the lemmas for each alternative. If ner was
-        disabled, returns a list, where each index is a lemma.
-        :returns: The parts of speech of the text
-        :rtype: {list}
-        """
-        return self._tpl_helper(2)
-
-    def graphs(self):
-        """Handles the Sentence Graph endpoint.
-
-        A graph of entities and relationships will appear under the
-        graph key for each sentence. This task provides similar information
-        to the relation extraction task or open information extraction task
-        in NLP.
-
-        If ner was enabled, returns a 3D list, where each index represents
-        a sentence group. Each sentence group has a list of alternatives.
-        Each alternative has a graph of relation(s). If ner was disabled,
-        returns a list, where each index is the graph for that sentence.
-        :returns: The graphs of the text
-        :rtype: {list}
-        """
-        if not self.graph_enabled:
-            raise AttributeError('The `graph` flag must be enabled in your '
-                                 'request in order to use `graphs()`.')
-
-        graphs = []
-        if self.ner_enabled:
-            for sentence_group in self.data:
-                graphs.append([a.graph for a in sentence_group.alternatives])
-        else:
-            for sentence in self.data:
-                graphs.append(sentence.graph)
-        return graphs
-
-    def ner(self):
-        """Handles the Named Entity Recognition endpoint.
-
-        Provides named entity suggestions for each relation in the text.
-        Returns a 3D list, where each index represents a sentence group.
-        Each sentence group has a list of alternatives. Each alternative
-        has a list of named entities (and their properties).
-
-        That is, the output is structured as:
-        >>> results[sentence_index][alternative_index]
-        # dict of entities to their token index in the sentence
-
-        :returns: The named entities of the text
-        :rtype: {list}
-        """
-        if not self.ner_enabled or not self.graph_enabled:
-            raise AttributeError('The `ner` and `graph` flags must be enabled '
-                                 'in your request in order to use `ner()`.')
-
-        data_out = []
-        for sentence_group in self.data:
-            sentence_group_out = []
-            for alternative in sentence_group.alternatives:
-                alternative_out = {}
-                if type(alternative) is Sentence:
-                    for graph_item in alternative.graph:
-                        if type(graph_item) is Relation:
-                            entities = graph_item.get_entities(ner_only=True)
-                            alternative_out.update(entities)
-                    sentence_group_out.append(alternative_out)
-            data_out.append(sentence_group_out)
-        return data_out
+                sentence_group_out = []
+                for alternative in sentence_group.alternatives:
+                    alternative_out = {}
+                    if type(alternative) is Sentence:
+                        for graph in alternative.graph:
+                            if type(graph) is Relation:
+                                entities = graph.get_entities(ner_only=True)
+                                alternative_out.update(entities)
+                        sentence_group_out.append(alternative_out)
+                data_out.append(sentence_group_out)
+            return data_out
 
 
 class SentenceGroup(object):
@@ -244,6 +280,16 @@ class SentenceGroup(object):
     Core API call.
     """
     def __init__(self, alternatives):
+        """Initializes a new `SentenceGroup`.
+
+        A `SentenceGroup` is a list of groupings of `Sentences`, each being
+        possible interpretations of the text (if NER is enabled). For example,
+        "Find me photos of the beatles" (the insect) vs.
+        "Find me photos of The Beatles" (the band).
+
+        :param alternatives: The `Sentence` alternatives
+        :type alternatives: {list}
+        """
         self.alternatives = alternatives
 
     def __repr__(self):
@@ -275,7 +321,8 @@ class Sentence(object):
     def __init__(self, sentence, tokens, graph, dependencies):
         """Initializes a new `Sentence`.
 
-        Creates a `Sentence` object which holds th
+        Creates a `Sentence` object which holds the data for each sentence in
+        the text.
         :param sentence: The sentence text
         :type sentence: string
         :param tokens: A list of the tokens in the sentence

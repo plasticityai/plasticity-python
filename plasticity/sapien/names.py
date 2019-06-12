@@ -2,82 +2,108 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import json
-
 from plasticity.utils import utils
 from plasticity.base.endpoint import Endpoint
-from plasticity.base.response import Response
 
 
 class Names(Endpoint):
     """The Names Endpoint performs all the Names API functions
     described here: https://www.plasticity.ai/api/docs/#sapien-names
+
+    Basic usage:
+
+    ```python
+    plasticity.sapien.names.post('bill gates')
+    ```
+
+
+    Arguments:
+
+    name: required
+    pretty: optional, defaults to False
+
+    ```python
+    plasticity.sapien.names.post('mary')
+    ```
+
+
+    Returns:
+
+    This returns a custom `Names.Response`, which has additional helper
+    functions from the default `Response` documented in the `Names.Response`
+    class below.
+
+    ```python
+    result = plasticity.sapien.names.post('sarah')
+    print(result.is_female_name)  # True
+    ```
     """
+    NAME = 'Names'
+    PARAMS = [
+        ('name',),
+        ('pretty', False)
+    ]
+
     def __init__(self, plasticity):
         """Initializes a new Names Endpoint."""
         super(Names, self).__init__(plasticity)
-        self.url = self.plasticity.sapien.url + "names/"
+        self.url = self.plasticity.sapien.url + 'names/'
 
-    def post(self, name, pretty=False, timeout=None):
-        """Makes a post to the Names API.
+    class Response(Endpoint.Response):
+        def is_male_name(self):
+            """Checks if a name is male, with certainty.
 
-        Runs the name with the requested parameters through the Sapien
-        Names API.
-        :param name: The name to analyze
-        :type name: str
-        :param pretty: Whether or not to pretty print, defaults to False
-        :type pretty: bool, optional
-        :returns: The response from the API endpoint
-        :rtype: {NamesResponse}
-        """
-        payload = json.dumps({
-            'name': name,
-            'pretty': pretty,
-        })
-        res = self.plasticity._post(self.url, payload, timeout=timeout)
-        return NamesResponse.from_json(res, pretty_enabled=pretty)
+            :returns: Whether the name is male
+            :rtype: {bool}
+            """
+            is_male = utils.deep_get(self.data, 'isMaleName', 'value')
+            is_certain = utils.deep_get(
+                self.data, 'isMaleName', 'confidence') == 'Certain'
+            return is_male and is_certain
 
+        def is_female_name(self):
+            """Checks if a name is female, with certainty.
 
-class NamesResponse(Response):
-    """Holds the `NamesResponse` data from a Names API call."""
-    def __init__(self, *args, **kwargs):
-        super(NamesResponse, self).__init__(*args, **kwargs)
+            :returns: Whether the name is female
+            :rtype: {bool}
+            """
+            is_female = utils.deep_get(self.data, 'isFemaleName', 'value')
+            is_certain = utils.deep_get(
+                self.data, 'isFemaleName', 'confidence') == 'Certain'
+            return is_female and is_certain
 
-    def __repr__(self):
-        return '<NamesResponse %s>' % id(self)
+        def is_first_name(self):
+            """Checks if a name is a first name, with certainty.
 
-    def __str__(self):
-        return '<NamesResponse %s>' % id(self)
+            :returns: Whether the name is a first name
+            :rtype: {bool}
+            """
+            is_male = utils.deep_get(self.data, 'isMaleName', 'value')
+            is_m_certain = utils.deep_get(
+                self.data, 'isMaleName', 'confidence') == 'Certain'
+            is_female = utils.deep_get(self.data, 'isFemaleName', 'value')
+            is_f_certain = utils.deep_get(
+                self.data, 'isFemaleName', 'confidence') == 'Certain'
+            return (is_male and is_m_certain) or (is_female and is_f_certain)
 
-    def is_male_name(self):
-        is_male = utils.deep_get(self.data, 'isMaleName', 'value')
-        is_certain = utils.deep_get(
-            self.data, 'isMaleName', 'confidence') == 'Certain'
-        return is_male and is_certain
+        def is_family_name(self):
+            """Checks if a name is a family name, with certainty.
 
-    def is_female_name(self):
-        is_female = utils.deep_get(self.data, 'isFemaleName', 'value')
-        is_certain = utils.deep_get(
-            self.data, 'isFemaleName', 'confidence') == 'Certain'
-        return is_female and is_certain
+            :returns: Whether the name is a family name
+            :rtype: {bool}
+            """
+            is_family_name = utils.deep_get(self.data, 'isFamilyName', 'value')
+            is_certain = utils.deep_get(
+                self.data, 'isFamilyName', 'confidence') == 'Certain'
+            return is_family_name and is_certain
 
-    def is_first_name(self):
-        is_male = utils.deep_get(self.data, 'isMaleName', 'value')
-        is_m_certain = utils.deep_get(
-            self.data, 'isMaleName', 'confidence') == 'Certain'
-        is_female = utils.deep_get(self.data, 'isFemaleName', 'value')
-        is_f_certain = utils.deep_get(
-            self.data, 'isFemaleName', 'confidence') == 'Certain'
-        return (is_male and is_m_certain) or (is_female and is_f_certain)
+        def is_name(self):
+            """Checks if the text supplied is a name, with certainty.
 
-    def is_family_name(self):
-        is_family_name = utils.deep_get(self.data, 'isFamilyName', 'value')
-        is_certain = utils.deep_get(
-            self.data, 'isFamilyName', 'confidence') == 'Certain'
-        return is_family_name and is_certain
-
-    def is_name(self):
-        is_name = utils.deep_get(self.data, 'isName', 'value')
-        is_certain = utils.deep_get(
-            self.data, 'isName', 'confidence') == 'Certain'
-        return is_name and is_certain
+            :returns: Whether the text is a name
+            :rtype: {bool}
+            """
+            is_name = utils.deep_get(self.data, 'isName', 'value')
+            is_certain = utils.deep_get(
+                self.data, 'isName', 'confidence') == 'Certain'
+            return is_name and is_certain

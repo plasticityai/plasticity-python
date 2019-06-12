@@ -12,10 +12,11 @@ class Sapien(Service):
     def __init__(self, plasticity):
         """Initializes a new Sapien Service."""
         super(Sapien, self).__init__(plasticity)
-        self.url = self.plasticity.url + "sapien/"
+        self.url = self.plasticity.url + 'sapien/'
 
         # Endpoints
         self._core = None
+        self._transform = None
         self._names = None
 
     @property
@@ -24,6 +25,13 @@ class Sapien(Service):
             from plasticity.sapien.core import Core
             self._core = Core(self.plasticity)
         return self._core
+
+    @property
+    def transform(self):
+        if self._transform is None:
+            from plasticity.sapien.transform import Transform
+            self._transform = Transform(self.plasticity)
+        return self._transform
 
     @property
     def names(self):
