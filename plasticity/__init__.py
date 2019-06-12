@@ -3,12 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import json
-import requests
-
-
-class PlasticityAPITimeoutError(Exception):
-    pass
 
 
 class Plasticity(object):
@@ -43,18 +37,3 @@ class Plasticity(object):
             from plasticity.cortex import Cortex
             self._cortex = Cortex(self)
         return self._cortex
-
-    def _post(self, url, data, timeout=None):
-        headers = {}
-        headers['content-type'] = "application/json"
-        if self.token:
-            headers['authorization'] = "Bearer " + self.token
-        try:
-            response = requests.request(
-                "POST", url, data=data, headers=headers, timeout=timeout)
-        except requests.exceptions.Timeout:
-            raise PlasticityAPITimeoutError("The request timed out.")
-        try:
-            return json.loads(response.text)
-        except ValueError:
-            return json.loads(response.text[:response.text.rfind('<!DOCTYPE')])

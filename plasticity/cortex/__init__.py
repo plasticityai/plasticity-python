@@ -12,4 +12,4 @@ class Cortex(Service):
     def __init__(self, plasticity):
         """Initializes a new Cortex Service."""
         super(Cortex, self).__init__(plasticity)
-        self.url = self.plasticity.url + "cortex/"
+        self.url = self.plasticity.url + 'cortex/'
