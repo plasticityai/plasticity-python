@@ -14,6 +14,7 @@ class Endpoint(object):
     Attributes:
         plasticity: a Plasticity instance with the API URL and token
     """
+
     def __init__(self, plasticity):
         """Initializes a new Endpoint."""
         self.plasticity = plasticity
@@ -36,7 +37,7 @@ class Endpoint(object):
         else:
             data = {}
             for i, param in enumerate(cls.PARAMS):
-                args_lookup = (args[i:i+1] or (None,))[0]
+                args_lookup = (args[i:i + 1] or (None,))[0]
                 if args_lookup is not None:
                     data[param[0]] = args_lookup
             data.update(kwargs)
@@ -67,6 +68,7 @@ class Endpoint(object):
         Attributes:
             plasticity: a Plasticity instance with the API URL and token
         """
+
         def __init__(self, response):
             self._response = response
             self._request = response.request

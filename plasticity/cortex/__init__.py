@@ -9,6 +9,7 @@ class Cortex(Service):
     """Cortex is the API service for knowledge. Its functions are described
     here: https://www.plasticity.ai/api/docs/#cortex
     """
+
     def __init__(self, plasticity):
         """Initializes a new Cortex Service."""
         super(Cortex, self).__init__(plasticity)

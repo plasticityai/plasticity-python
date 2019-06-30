@@ -38,7 +38,7 @@ def indent(text, prefix='\t'):
     try:
         textwrap.indent
     except AttributeError:  # function wasn't added until Python 3.3
-        return ''.join(prefix+line for line in text.splitlines(True))
+        return ''.join(prefix + line for line in text.splitlines(True))
     else:
         return textwrap.indent(text, prefix)
 

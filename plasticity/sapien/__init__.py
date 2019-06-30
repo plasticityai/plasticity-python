@@ -9,6 +9,7 @@ class Sapien(Service):
     """Sapien is the API service for language. Its functions are
     described here: https://www.plasticity.ai/api/docs/#sapien
     """
+
     def __init__(self, plasticity):
         """Initializes a new Sapien Service."""
         super(Sapien, self).__init__(plasticity)

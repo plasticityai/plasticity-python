@@ -9,6 +9,7 @@ class Service(object):
     Attributes:
         plasticity: a Plasticity instance with the API URL and token
     """
+
     def __init__(self, plasticity):
         """Initializes a new Service."""
         self.plasticity = plasticity

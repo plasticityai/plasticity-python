@@ -265,9 +265,9 @@ class Core(Endpoint):
                 sentence_group_out = []
                 for alternative in sentence_group.alternatives:
                     alternative_out = {}
-                    if type(alternative) is Sentence:
+                    if isinstance(alternative, Sentence):
                         for graph in alternative.graph:
-                            if type(graph) is Relation:
+                            if isinstance(graph, Relation):
                                 entities = graph.get_entities(ner_only=True)
                                 alternative_out.update(entities)
                         sentence_group_out.append(alternative_out)
@@ -279,6 +279,7 @@ class SentenceGroup(object):
     """Holds the `SentenceGroup` data within a `CoreResponse` from a
     Core API call.
     """
+
     def __init__(self, alternatives):
         """Initializes a new `SentenceGroup`.
 
@@ -318,6 +319,7 @@ class Sentence(object):
     """Holds the `Sentence` data within a `CoreResponse` or
     `SentenceGroup` from a Core API call.
     """
+
     def __init__(self, sentence, tokens, graph, dependencies):
         """Initializes a new `Sentence`.
 
@@ -377,6 +379,7 @@ class Graph(list):
     Returns a `Graph`, which will be an empty list or a list with each
     `Relation` contained in the `Sentence`.
     """
+
     def __init__(self, *args, **kwargs):
         super(Graph, self).__init__(args[0])
 
@@ -405,19 +408,41 @@ class Relation(object):
     """Holds the `Relation` data within a `Sentence` from a
     Core API call.
     """
+
     def __init__(
-            self, subject, predicate, object_, qualifiers, prepositions,
-            verb_modifiers_subject_prefix, verb_modifiers_object_prefix,
-            question, question_auxiliary):
+            self,
+            qualifiers,
+            question,
+            question_auxiliary,
+            verb_modifiers_subject_prefix,
+            subject,
+            predicate,
+            object_,
+            verb_modifiers_object_suffix,
+            prepositions,
+            qualified_object,
+            inferred,
+            nested,
+            qualified,
+            artificial_type,
+            _features,
+            confidence):
+        self.qualifiers = qualifiers
+        self.question = question
+        self.question_auxiliary = question_auxiliary
+        self.verb_modifiers_subject_prefix = verb_modifiers_subject_prefix
         self.subject = subject
         self.predicate = predicate
         self.object = object_
-        self.qualifiers = qualifiers
+        self.verb_modifiers_object_suffix = verb_modifiers_object_suffix
         self.prepositions = prepositions
-        self.verb_modifiers_subject_prefix = verb_modifiers_subject_prefix
-        self.verb_modifiers_object_prefix = verb_modifiers_object_prefix
-        self.question = question
-        self.question_auxiliary = question_auxiliary
+        self.qualified_object = qualified_object
+        self.inferred = inferred
+        self.nested = nested
+        self.qualified = qualified
+        self.artificial_type = artificial_type
+        self._features = _features
+        self.confidence = confidence
 
     def __repr__(self):
         return '<Relation {}>'.format(id(self))
@@ -425,40 +450,86 @@ class Relation(object):
     def __str__(self):
         output = 'Relation:'
         output += '\n'
+        if self.qualifiers.size() > 0:
+            output += utils.indent(utils.shorten(
+                'Qualifiers: {}'.format(str(self.qualifiers))))
+            output += '\n'
+        if self.question:
+            output += utils.indent('Question: {}'.format(self.question))
+            output += '\n'
+            output += utils.indent(
+                'Question Auxiliary: {}'.format(
+                    self.question_auxiliary))
+            output += '\n'
+        if self.verb_modifiers_subject_prefix.size() > 0:
+            output += utils.indent(utils.shorten('Verb Modifiers Subject Prefix: {}'.format(
+                str(self.verb_modifiers_subject_prefix))))
+            output += '\n'
         output += utils.indent('Subject: {}'.format(repr(self.subject)))
         output += '\n'
         output += utils.indent('Predicate: {}'.format(repr(self.predicate)))
         output += '\n'
         output += utils.indent('Object: {}'.format(repr(self.object)))
         output += '\n'
+        if self.verb_modifiers_object_suffix.size() > 0:
+            output += utils.indent(utils.shorten('Verb Modifiers Object Suffix: {}'.format(
+                str(self.verb_modifiers_object_suffix))))
+            output += '\n'
         output += utils.indent(utils.shorten(
             'Prepositions: {}'.format(str(self.prepositions))))
         output += '\n'
+        if self.qualified_object:
+            output += utils.indent(
+                'Qualified Object: {}'.format(
+                    repr(
+                        self.qualified_object)))
+            output += '\n'
         return output
 
     @classmethod
     def from_json(cls, r):
         """Builds a `Relation` from a json object."""
+        qualifiers = r.get('qualifiers')
+        question = r.get('question')
+        question_auxiliary = r.get('questionAuxiliary')
+        vm_subject_prefix = r.get('verbModifiersSubjectPrefix')
         type_ = utils.deep_get(r, 'subject', 'type')
         subject = (
             Entity.from_json(r['subject']) if type_ == 'entity' else
             Relation.from_json(r['subject']) if type_ == 'relation' else None)
+        predicate = Predicate.from_json(r.get('predicate'))
         type_ = utils.deep_get(r, 'object', 'type')
         object_ = (
             Entity.from_json(r['object']) if type_ == 'entity' else
             Relation.from_json(r['object']) if type_ == 'relation' else None)
+        vm_object_suffix = r.get('verbModifiersObjectSuffix')
         prepositions = [Preposition.from_json(p)
                         for p in r.get('prepositions', [])
                         if p.get('type') == 'preposition']
-        predicate = Predicate.from_json(r.get('predicate'))
-        qualifiers = r.get('qualifiers')
-        vm_subject_prefix = r.get('verbModifiersSubjectSuffix')
-        vm_object_prefix = r.get('verbModifiersObjectSuffix')
-        question = r.get('question')
-        question_auxiliary = r.get('questionAuxiliary')
+        type_ = utils.deep_get(r, 'qualified_object', 'type')
+        qualified_object = (
+            Entity.from_json(
+                r['qualified_object']) if type_ == 'entity' else Relation.from_json(
+                r['qualified_object']) if type_ == 'relation' else None)
+        inferred = r.get('inferred', False)
+        nested = r.get('nested', False)
+        qualified = r.get('qualified', False)
+        artificial_type = r.get('artificialType', None)
+        _features = r.get('_features', [])
+        confidence = r.get('confidence', 1.0)
         return cls(
-            subject, predicate, object_, qualifiers, prepositions,
-            vm_subject_prefix, vm_object_prefix, question, question_auxiliary)
+            qualifiers,
+            question,
+            question_auxiliary,
+            vm_subject_prefix,
+            subject,
+            predicate,
+            object_,
+            vm_object_suffix,
+            prepositions,
+            qualified_object,
+            _features,
+            confidence)
 
     def get_entities(self, ner_only=False):
         """Gets the entities of a `Relation`.
@@ -478,7 +549,7 @@ class Relation(object):
             :param entities: The cumulative entities found, defaults to {}
             :type entities: dict, optional
             """
-            if type(x) is Entity:
+            if isinstance(x, Entity):
                 if not ner_only or (ner_only and x.ner):
                     if x.index not in entities:
                         values = {}
@@ -487,7 +558,7 @@ class Relation(object):
                         if x.ner:
                             values['ner'] = x.ner
                         entities[x.index] = values
-            elif type(x) is Relation:
+            elif isinstance(x, Relation):
                 get_entities_helper(x.subject, entities)
                 get_entities_helper(x.object, entities)
                 for preposition in x.prepositions:
@@ -502,19 +573,28 @@ class Entity(object):
     Core API call. An `Entity` holds information for subjects
     and objects.
     """
+
     def __init__(
-            self, entity, index, determiner, proper_noun, person,
-            entity_modifiers_prefix, entity_modifiers_suffix,
-            possessive_entity, possessive_suffix, ner):
-        self.entity = entity
-        self.index = index
-        self.determiner = determiner
-        self.proper_noun = proper_noun
-        self.person = person
-        self.entity_modifiers_prefix = entity_modifiers_prefix
-        self.entity_modifiers_suffix = entity_modifiers_suffix
+            self,
+            possessive_entity,
+            possessive_suffix,
+            determiner,
+            entity_modifiers_prefix,
+            entity,
+            entity_modifiers_suffix,
+            index,
+            person,
+            proper_noun,
+            ner):
         self.possessive_entity = possessive_entity
         self.possessive_suffix = possessive_suffix
+        self.determiner = determiner
+        self.entity_modifiers_prefix = entity_modifiers_prefix
+        self.entity = entity
+        self.entity_modifiers_suffix = entity_modifiers_suffix
+        self.index = index
+        self.person = person
+        self.proper_noun = proper_noun
         self.ner = ner
 
     def __repr__(self):
@@ -523,14 +603,19 @@ class Entity(object):
     def __str__(self):
         output = 'Entity:'
         output += '\n'
+        output += utils.indent(
+            'Possessive Entity: {}'.format(
+                repr(
+                    self.possessive_entity)))
+        output += '\n'
         output += utils.indent('Index: {}'.format(self.index))
         output += '\n'
         output += utils.indent('Determiner: {}'.format(self.determiner))
         output += '\n'
-        output += utils.indent('Entity: {}'.format(self.entity))
-        output += '\n'
         output += utils.indent(utils.shorten(
             'Modifiers Prefix: {}'.format(str(self.entity_modifiers_prefix))))
+        output += '\n'
+        output += utils.indent('Entity: {}'.format(self.entity))
         output += '\n'
         output += utils.indent(utils.shorten(
             'Modifiers Suffix: {}'.format(str(self.entity_modifiers_suffix))))
@@ -540,44 +625,61 @@ class Entity(object):
     @classmethod
     def from_json(cls, e):
         """Builds an `Entity` from a json object."""
-        entity = e.get('entity')
-        index = e.get('index')
-        determiner = e.get('determiner')
-        proper_noun = e.get('properNoun')
-        person = e.get('person')
-        entity_modifiers_prefix = e.get('entityModifiersPrefix')
-        entity_modifiers_suffix = e.get('entityModifiersSuffix')
         possessive_entity = e.get('possessive_entity')
         possessive_suffix = e.get('possessive_suffix')
+        determiner = e.get('determiner')
+        entity_modifiers_prefix = e.get('entityModifiersPrefix')
+        entity = e.get('entity')
+        entity_modifiers_suffix = e.get('entityModifiersSuffix')
+        index = e.get('index')
+        person = e.get('person')
+        proper_noun = e.get('properNoun')
         ner = e.get('ner')
         if ner is not None:
             ner = [Concept.from_json(c) for c in ner
                    if c.get('type') == 'concept']
         return cls(
-            entity, index, determiner, proper_noun, person,
-            entity_modifiers_prefix, entity_modifiers_suffix,
-            possessive_entity, possessive_suffix, ner)
+            possessive_entity,
+            possessive_suffix,
+            determiner,
+            entity_modifiers_prefix,
+            entity,
+            entity_modifiers_suffix,
+            index,
+            person,
+            proper_noun,
+            ner)
 
 
 class Predicate(object):
     """Holds the `Predicate` data within a `Relation` from a
     Core API call. A `Predicate` holds information for verbs.
     """
+
     def __init__(
-            self, verb, index, negated, tense, conjugation, phrasal_particle,
-            auxiliary_qualifier, verb_prefix, verb_suffix,
-            verb_modifiers_prefix, verb_modifiers_suffix):
+            self,
+            verb_modifiers_prefix,
+            verb_prefix,
+            verb,
+            verb_suffix,
+            verb_modifiers_suffix,
+            index,
+            negated,
+            tense,
+            conjugation,
+            auxiliary_qualifier,
+            phrasal_particle):
+        self.verb_modifiers_prefix = verb_modifiers_prefix
+        self.verb_prefix = verb_prefix
         self.verb = verb
+        self.verb_suffix = verb_suffix
+        self.verb_modifiers_suffix = verb_modifiers_suffix
         self.index = index
         self.negated = negated
         self.tense = tense
         self.conjugation = conjugation
-        self.phrasal_particle = phrasal_particle
         self.auxiliary_qualifier = auxiliary_qualifier
-        self.verb_prefix = verb_prefix
-        self.verb_suffix = verb_suffix
-        self.verb_modifiers_prefix = verb_modifiers_prefix
-        self.verb_modifiers_suffix = verb_modifiers_suffix
+        self.phrasal_particle = phrasal_particle
 
     def __repr__(self):
         return '<Predicate {}>'.format(id(self))
@@ -587,14 +689,14 @@ class Predicate(object):
         output += '\n'
         output += utils.indent('Index: {}'.format(self.index))
         output += '\n'
-        output += utils.indent('Verb: {}'.format(self.determiner))
+        output += utils.indent(utils.shorten(
+            'Modifiers Prefix: {}'.format(str(self.verb_modifiers_prefix))))
         output += '\n'
         output += utils.indent('Prefix: {}'.format(self.verb_prefix))
         output += '\n'
-        output += utils.indent('Suffix: {}'.format(self.verb_suffix))
+        output += utils.indent('Verb: {}'.format(self.determiner))
         output += '\n'
-        output += utils.indent(utils.shorten(
-            'Modifiers Prefix: {}'.format(str(self.verb_modifiers_prefix))))
+        output += utils.indent('Suffix: {}'.format(self.verb_suffix))
         output += '\n'
         output += utils.indent(utils.shorten(
             'Modifiers Suffix: {}'.format(str(self.verb_modifiers_suffix))))
@@ -604,31 +706,51 @@ class Predicate(object):
     @classmethod
     def from_json(cls, p):
         """Builds a `Predicate` from a json object."""
+        verb_modifiers_prefix = p.get('verbModifiersPrefix')
+        verb_prefix = p.get('verbPrefix')
         verb = p.get('verb')
+        verb_suffix = p.get('verbSuffix')
+        verb_modifiers_suffix = p.get('verbModifiersSuffix')
         index = p.get('index')
         negated = p.get('negated')
         tense = p.get('tense')
         conjugation = p.get('conjugation')
-        phrasal_particle = p.get('phrasalParticle')
         auxiliary_qualifier = p.get('auxiliaryQualifier')
-        verb_prefix = p.get('verbPrefix')
-        verb_suffix = p.get('verbSuffix')
-        verb_modifiers_prefix = p.get('verbModifiersPrefix')
-        verb_modifiers_suffix = p.get('verbModifiersSuffix')
+        phrasal_particle = p.get('phrasalParticle')
+
         return cls(
-            verb, index, negated, tense, conjugation, phrasal_particle,
-            auxiliary_qualifier, verb_prefix, verb_suffix,
-            verb_modifiers_prefix, verb_modifiers_suffix)
+            verb_modifiers_prefix,
+            verb_prefix,
+            verb,
+            verb_suffix,
+            verb_modifiers_suffix,
+            index,
+            negated,
+            tense,
+            conjugation,
+            auxiliary_qualifier,
+            phrasal_particle)
 
 
 class Preposition(object):
     """Holds the `Preposition` data within a `Relation` from a
     Core API call.
     """
-    def __init__(self, preposition, preposition_object, index):
+
+    def __init__(
+            self,
+            preposition_prefix,
+            preposition,
+            preposition_object,
+            nested_prepositions,
+            index,
+            preposition_type):
+        self.preposition_prefix = preposition_prefix
         self.preposition = preposition
-        self.index = index
         self.preposition_object = preposition_object
+        self.nested_prepositions = nested_prepositions
+        self.index = index
+        self.preposition_type = preposition_type
 
     def __repr__(self):
         return '<Preposition {}>'.format(id(self))
@@ -638,22 +760,38 @@ class Preposition(object):
         output += '\n'
         output += utils.indent('Index: {}'.format(self.index))
         output += '\n'
+        output += utils.indent(
+            'Preposition Type: {}'.format(
+                self.preposition_type))
+        output += '\n'
+        output += utils.indent(utils.shorten(
+            'Preposition Prefix: {}'.format(str(self.preposition_prefix))))
+        output += '\n'
         output += utils.indent('Preposition: {}'.format(self.preposition))
         output += '\n'
         output += utils.indent('Object: {}'.format(self.preposition_object))
+        output += '\n'
+        output += utils.indent(utils.shorten(
+            'Nested Prepositions: {}'.format(str(self.nested_prepositions))))
         output += '\n'
         return output
 
     @classmethod
     def from_json(cls, p):
         """Builds a `Predicate` from a json object."""
+        preposition_prefix = p.get('preposition_prefix', [])
         preposition = p.get('preposition')
-        index = p.get('index')
         type_ = utils.deep_get(p, 'prepositionObject', 'type')
         preposition_object = (
             Entity.from_json(p['prepositionObject']) if type_ == 'entity' else
             Relation.from_json(p['prepositionObject']) if type_ == 'relation'
             else None)
+        nested_prepositions = [
+            Preposition.from_json(np) for np in p.get(
+                'nestedPrepositions',
+                []) if np.get('type') == 'preposition']
+        index = p.get('index')
+        preposition_type = p.get('preposition_type', None)
         return cls(preposition, preposition_object, index)
 
 
@@ -661,9 +799,10 @@ class Concept(object):
     """Holds the `Concept` data within an `Entity` from a
     Core API call.
     """
-    def __init__(self, label, id_, freebase_id):
-        self.label = label
+
+    def __init__(self, id_, label, freebase_id):
         self.id_ = id_
+        self.label = label
         self.freebase_id = freebase_id
 
     def __repr__(self):
@@ -683,7 +822,7 @@ class Concept(object):
     @classmethod
     def from_json(cls, c):
         """Builds a `Concept` from a json object."""
-        label = c.get('label')
         id_ = c.get('id')
+        label = c.get('label')
         freebase_id = c.get('freebaseIdentifier')
-        return cls(label, id_, freebase_id)
+        return cls(id_, label, freebase_id)
