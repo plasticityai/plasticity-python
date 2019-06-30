@@ -462,7 +462,7 @@ class Relation(object):
                     self.question_auxiliary))
             output += '\n'
         if self.verb_modifiers_subject_prefix.size() > 0:
-            output += utils.indent(utils.shorten('Verb Modifiers Subject Prefix: {}'.format(
+            output += utils.indent(utils.shorten('Verb Modifiers Subject Prefix: {}'.format(  # noqa
                 str(self.verb_modifiers_subject_prefix))))
             output += '\n'
         output += utils.indent('Subject: {}'.format(repr(self.subject)))
@@ -472,7 +472,7 @@ class Relation(object):
         output += utils.indent('Object: {}'.format(repr(self.object)))
         output += '\n'
         if self.verb_modifiers_object_suffix.size() > 0:
-            output += utils.indent(utils.shorten('Verb Modifiers Object Suffix: {}'.format(
+            output += utils.indent(utils.shorten('Verb Modifiers Object Suffix: {}'.format(  # noqa
                 str(self.verb_modifiers_object_suffix))))
             output += '\n'
         output += utils.indent(utils.shorten(
@@ -509,7 +509,7 @@ class Relation(object):
         type_ = utils.deep_get(r, 'qualified_object', 'type')
         qualified_object = (
             Entity.from_json(
-                r['qualified_object']) if type_ == 'entity' else Relation.from_json(
+                r['qualified_object']) if type_ == 'entity' else Relation.from_json(  # noqa
                 r['qualified_object']) if type_ == 'relation' else None)
         inferred = r.get('inferred', False)
         nested = r.get('nested', False)
@@ -528,6 +528,10 @@ class Relation(object):
             vm_object_suffix,
             prepositions,
             qualified_object,
+            inferred,
+            nested,
+            qualified,
+            artificial_type,
             _features,
             confidence)
 
@@ -792,7 +796,12 @@ class Preposition(object):
                 []) if np.get('type') == 'preposition']
         index = p.get('index')
         preposition_type = p.get('preposition_type', None)
-        return cls(preposition, preposition_object, index)
+        return cls(preposition_prefix,
+                   preposition,
+                   preposition_object,
+                   nested_prepositions,
+                   index,
+                   preposition_type)
 
 
 class Concept(object):
