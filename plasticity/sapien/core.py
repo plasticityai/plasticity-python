@@ -437,17 +437,17 @@ class Relation(object):
         self.verb_modifiers_object_suffix = verb_modifiers_object_suffix
         self.prepositions = prepositions
         self.qualified_object = qualified_object
-        if self.inferred is not None:
+        if inferred is not None:
             self.inferred = inferred
-        if self.nested is not None:
+        if nested is not None:
             self.nested = nested
-        if self.qualified is not None:
+        if qualified is not None:
             self.qualified = qualified
-        if self.artificial_type is not None:
+        if artificial_type is not None:
             self.artificial_type = artificial_type
-        if self._features is not None:
+        if _features is not None:
             self._features = _features
-        if self.confidence is not None:
+        if confidence is not None:
             self.confidence = confidence
 
     def __repr__(self):
