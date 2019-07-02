@@ -437,12 +437,18 @@ class Relation(object):
         self.verb_modifiers_object_suffix = verb_modifiers_object_suffix
         self.prepositions = prepositions
         self.qualified_object = qualified_object
-        self.inferred = inferred
-        self.nested = nested
-        self.qualified = qualified
-        self.artificial_type = artificial_type
-        self._features = _features
-        self.confidence = confidence
+        if self.inferred is not None:
+            self.inferred = inferred
+        if self.nested is not None:
+            self.nested = nested
+        if self.qualified is not None:
+            self.qualified = qualified
+        if self.artificial_type is not None:
+            self.artificial_type = artificial_type
+        if self._features is not None:
+            self._features = _features
+        if self.confidence is not None:
+            self.confidence = confidence
 
     def __repr__(self):
         return '<Relation {}>'.format(id(self))
@@ -511,12 +517,12 @@ class Relation(object):
             Entity.from_json(
                 r['qualified_object']) if type_ == 'entity' else Relation.from_json(  # noqa
                 r['qualified_object']) if type_ == 'relation' else None)
-        inferred = r.get('inferred', False)
-        nested = r.get('nested', False)
-        qualified = r.get('qualified', False)
+        inferred = r.get('inferred', None)
+        nested = r.get('nested', None)
+        qualified = r.get('qualified', None)
         artificial_type = r.get('artificialType', None)
-        _features = r.get('_features', [])
-        confidence = r.get('confidence', 1.0)
+        _features = r.get('_features', None)
+        confidence = r.get('confidence', None)
         return cls(
             qualifiers,
             question,
