@@ -399,7 +399,7 @@ class Graph(list):
     @classmethod
     def from_json(cls, g):
         """Builds a `Graph` from a json object."""
-        graph = [Relation.from_json(x) for x in g
+        graph = [Relation.from_json(x, top_level=True) for x in g
                  if x.get('type') == 'relation']
         return cls(graph)
 
@@ -426,7 +426,8 @@ class Relation(object):
             qualified,
             artificial_type,
             _features,
-            confidence):
+            confidence,
+            top_level):
         self.qualifiers = qualifiers
         self.question = question
         self.question_auxiliary = question_auxiliary
@@ -437,17 +438,12 @@ class Relation(object):
         self.verb_modifiers_object_suffix = verb_modifiers_object_suffix
         self.prepositions = prepositions
         self.qualified_object = qualified_object
-        if inferred is not None:
+        if top_level:
             self.inferred = inferred
-        if nested is not None:
             self.nested = nested
-        if qualified is not None:
             self.qualified = qualified
-        if artificial_type is not None:
             self.artificial_type = artificial_type
-        if _features is not None:
             self._features = _features
-        if confidence is not None:
             self.confidence = confidence
 
     def __repr__(self):
@@ -493,7 +489,7 @@ class Relation(object):
         return output
 
     @classmethod
-    def from_json(cls, r):
+    def from_json(cls, r, top_level=False):
         """Builds a `Relation` from a json object."""
         qualifiers = r.get('qualifiers')
         question = r.get('question')
@@ -517,12 +513,12 @@ class Relation(object):
             Entity.from_json(
                 r['qualified_object']) if type_ == 'entity' else Relation.from_json(  # noqa
                 r['qualified_object']) if type_ == 'relation' else None)
-        inferred = r.get('inferred', None)
-        nested = r.get('nested', None)
-        qualified = r.get('qualified', None)
+        inferred = r.get('inferred', False)
+        nested = r.get('nested', False)
+        qualified = r.get('qualified', False)
         artificial_type = r.get('artificialType', None)
-        _features = r.get('_features', None)
-        confidence = r.get('confidence', None)
+        _features = r.get('_features', [])
+        confidence = r.get('confidence', 1.0)
         return cls(
             qualifiers,
             question,
@@ -539,7 +535,8 @@ class Relation(object):
             qualified,
             artificial_type,
             _features,
-            confidence)
+            confidence,
+            top_level)
 
     def get_entities(self, ner_only=False):
         """Gets the entities of a `Relation`.
